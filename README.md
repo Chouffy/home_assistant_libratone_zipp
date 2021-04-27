@@ -22,12 +22,18 @@ Currently, this module has to be installed manually:
 
 ## Roadmap
 
+### Module improvement
+
+* [ ] Make the module async
+* [ ] Submit it for offical integration!
+
+### Functionnality coverage
+
 * [x] Set up entity in home assistant
 * [x] Basic playback status
 * [x] Calculate status
 * [x] Set a sound mode (voicing)
 * [ ] Retrieve basic playback status: play, pause, stop, next, prev
-* [ ] Make the module async
 
 Other functionalities:
 

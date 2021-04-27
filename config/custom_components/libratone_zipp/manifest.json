@@ -1,0 +1,8 @@
+{
+  "domain": "libratone_zipp",
+  "name": "Libratone Zipp speaker control",
+  "documentation": "",
+  "requirements": ["python_libratone_zipp==1.1.2"],
+  "codeowners": [],
+  "iot_class": "local_polling"
+}

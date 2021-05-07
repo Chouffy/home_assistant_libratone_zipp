@@ -33,6 +33,7 @@ Currently, this module has to be installed manually:
 * [x] Basic playback status
 * [x] Calculate status
 * [x] Set a sound mode (voicing)
+* [ ] Use human names for Voicing / Sound mode
 * [ ] Retrieve basic playback status: play, pause, stop, next, prev
 
 Other functionalities:
@@ -60,6 +61,8 @@ Other functionalities:
     * [ ] Retrieve extended playback status: shuffle, repeat
     * [ ] Set Source
     * [ ] Retrieve current source
+* Multi-room
+    * [ ] Implement SoundSpace Link
 
 ## Acknowledgment
 

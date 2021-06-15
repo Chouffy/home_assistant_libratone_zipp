@@ -17,6 +17,7 @@ Currently, this module has to be installed manually:
         host: 192.168.99.99
         name: "Zipp"
     ```
+1. If you are running on Docker, you need to forward `3333/udp` and `7778/udp`.
 
 1. Restart the server
 

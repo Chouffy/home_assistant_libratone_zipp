@@ -25,8 +25,9 @@ Currently, this module has to be installed manually:
 
 ### Module improvement
 
+* [ ] Submit it for non-official integration on [HACS - Home Assistant Community Store](https://hacs.xyz/)!
+* [ ] Submit it for official integration!
 * [ ] Make the module async
-* [ ] Submit it for offical integration!
 
 ### Functionnality coverage
 

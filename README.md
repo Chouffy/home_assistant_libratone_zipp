@@ -34,28 +34,28 @@ Currently, this module has to be installed manually:
 * [x] Basic playback status
 * [x] Calculate status
 * [x] Set a sound mode (voicing)
-* [ ] Use human names for Voicing / Sound mode
-* [ ] Retrieve basic playback status: play, pause, stop, next, prev
+* [x] Use human names for Voicing / Sound mode
+* [x] Retrieve basic playback status: play, pause, stop, next, prev
 
 Other functionalities:
 
 * Volume
-    * [ ] Set volume
-    * [ ] Retrieve volume
+    * [x] Set volume
+    * [x] Retrieve volume
 * Current Playback info
     * [ ] Retrieve current playback source
     * [ ] Retrieve current title
     * [ ] Retrieve media type: bluetooth, spotify, aux, radio, ...
 * Standby
-    * [ ] Set to immediate standby
+    * [x] Set to immediate standby (sleep)
     * [ ] Set a standby timer
     * [ ] Retrive a standby timer
 * Voicing & Room Setting
-    * [ ] Retrieve current Voicing
+    * [x] Retrieve current Voicing
     * [ ] Set Room Setting
     * [ ] Retrieve current Room Setting
 * Favorites
-    * [ ] Play a favorite
+    * [~] Play a favorite (but it's only number)
     * [ ] Set a Favorite
 * Extended current playback info
     * [ ] Set extended playback status: shuffle, repeat

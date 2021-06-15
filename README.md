@@ -30,32 +30,34 @@ Currently, this module has to be installed manually:
 
 ### Functionnality coverage
 
-* [x] Set up entity in home assistant
-* [x] Basic playback status
-* [x] Calculate status
-* [x] Set a sound mode (voicing)
-* [x] Use human names for Voicing / Sound mode
-* [x] Retrieve basic playback status: play, pause, stop, next, prev
+* v1.0
+    * [x] Set up entity in home assistant
+    * [x] Basic playback status
+    * [x] Calculate status
+* v2.0
+    * [x] Set a sound mode (voicing)
+    * [x] Use human names for Voicing / Sound mode
+    * [x] Retrieve basic playback status: play, pause, stop, next, prev
+    * [x] Set volume
+    * [x] Retrieve volume
+    * [x] Set to immediate standby (sleep)
+    * [x] Retrieve current Voicing
+    * [x] (kinda) Play a favorite (but it's only number)
 
 Other functionalities:
 
-* Volume
-    * [x] Set volume
-    * [x] Retrieve volume
 * Current Playback info
     * [ ] Retrieve current playback source
     * [ ] Retrieve current title
     * [ ] Retrieve media type: bluetooth, spotify, aux, radio, ...
 * Standby
-    * [x] Set to immediate standby (sleep)
     * [ ] Set a standby timer
-    * [ ] Retrive a standby timer
+    * [ ] Retrieve a standby timer
 * Voicing & Room Setting
-    * [x] Retrieve current Voicing
     * [ ] Set Room Setting
     * [ ] Retrieve current Room Setting
 * Favorites
-    * [~] Play a favorite (but it's only number)
+    * [x] Play a favorite (proper title)
     * [ ] Set a Favorite
 * Extended current playback info
     * [ ] Set extended playback status: shuffle, repeat

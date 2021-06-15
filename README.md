@@ -2,7 +2,10 @@
 
 This aims to control a Libratone Zipp speaker within [Home Assistant](https://www.home-assistant.io/) using [this Python library](https://github.com/Chouffy/python_libratone_zipp).
 
-Pre-requisites: the [python-libratone-zipp](https://pypi.org/project/python-libratone-zipp/) library.
+Prerequisites:
+
+* the [python-libratone-zipp](https://pypi.org/project/python-libratone-zipp/) library
+* you may need to forward `3333/udp` and `7778/udp`
 
 ## Usage
 
@@ -17,8 +20,6 @@ Currently, this module has to be installed manually:
         host: 192.168.99.99
         name: "Zipp"
     ```
-1. If you are running on Docker, you need to forward `3333/udp` and `7778/udp`.
-
 1. Restart the server
 
 ## Roadmap

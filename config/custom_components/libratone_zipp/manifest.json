@@ -1,9 +1,10 @@
 {
   "domain": "libratone_zipp",
-  "name": "Libratone Zipp speaker control",
+  "name": "Libratone Zipp",
   "version": "2.0.0",
-  "documentation": "",
-  "codeowners": [],
+  "documentation": "https://github.com/Chouffy/home_assistant_libratone_zipp",
+  "issue_tracker": "https://github.com/Chouffy/home_assistant_libratone_zipp/issues",
+  "codeowners": ["@chouffy"],
   "requirements": ["python_libratone_zipp==2.0.0"],
   "iot_class": "local_push"
 }

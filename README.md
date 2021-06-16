@@ -1,7 +1,7 @@
 # Libratone Zipp controller for Home Assistant
 
 This aims to control a Libratone Zipp speaker within [Home Assistant](https://www.home-assistant.io/) using [this Python library](https://github.com/Chouffy/python_libratone_zipp).
- 
+
 Prerequisites:
 
 * the [python-libratone-zipp](https://pypi.org/project/python-libratone-zipp/) library

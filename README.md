@@ -9,24 +9,40 @@ Prerequisites:
 
 ## Usage
 
-Currently, this module has to be installed manually:
+### Installation via [HACS](https://hacs.xyz/)
 
-1. Copy `/config/*` in your `/config/` directory of Home Assistant.
-1. Add the following in your `/config/configuration.yaml`
+1. Add `https://github.com/Chouffy/home_assistant_libratone_zipp` as a custom repository with *integration* type
+1. Click *Install*
+1. Add the following in your `/config/configuration.yaml`:
 
     ```yaml
     media_player:
       - platform: libratone_zipp
-        host: 192.168.99.99
+        host: 192.168.X.X
         name: "Zipp"
     ```
+
+1. Restart the server
+
+### Manual installation
+
+1. Copy `/custom_components/*` in your `/config/custom_components/` directory of Home Assistant.
+1. Add the following in your `/config/configuration.yaml`:
+
+    ```yaml
+    media_player:
+      - platform: libratone_zipp
+        host: 192.168.X.X
+        name: "Zipp"
+    ```
+
 1. Restart the server
 
 ## Roadmap
 
 ### Module improvement
 
-* [ ] Submit it for non-official integration on [HACS - Home Assistant Community Store](https://hacs.xyz/)!
+* [ ] Submit it for non-official integration on HACS - in progress
 * [ ] Submit it for official integration!
 * [ ] Make the module async
 

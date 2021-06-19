@@ -11,7 +11,9 @@ Prerequisites:
 
 ### Installation via [HACS](https://hacs.xyz/)
 
-1. Add `https://github.com/Chouffy/home_assistant_libratone_zipp` as a custom repository with *integration* type
+1. Either
+    * HACS installation: add `https://github.com/Chouffy/home_assistant_libratone_zipp` as a custom repository with *integration* type
+    * Manual installation: Copy `/custom_components/*` in your `/config/custom_components/` directory of Home Assistant.
 1. Click *Install*
 1. Add the following in your `/config/configuration.yaml`:
 
@@ -24,28 +26,11 @@ Prerequisites:
 
 1. Restart the server
 
-### Manual installation
+## Features
 
-1. Copy `/custom_components/*` in your `/config/custom_components/` directory of Home Assistant.
-1. Add the following in your `/config/configuration.yaml`:
+### Known bugs
 
-    ```yaml
-    media_player:
-      - platform: libratone_zipp
-        host: 192.168.X.X
-        name: "Zipp"
-    ```
-
-1. Restart the server
-
-## Roadmap
-
-### Module improvement
-
-* [ ] Re-enable automatic HACS workflow
-* [ ] Submit it for non-official integration on HACS - in progress
-* [ ] Submit it for official integration!
-* [ ] Make the module async
+* On Bluetooth and when the music is playing, you only get "Play" button, not Pause.
 
 ### Functionnality coverage
 
@@ -69,6 +54,11 @@ Current coverage suits me, even if the python integration has much more options.
 
 Other functionalities:
 
+* Module
+    * [ ] Re-enable automatic HACS workflow
+    * [ ] Submit it for non-official integration on HACS - in progress
+    * [ ] Submit it for official integration!
+    * [ ] Make the module async
 * Current Playback info
     * [ ] Retrieve current playback source
     * [ ] Retrieve media type: bluetooth, spotify, aux, radio, ...

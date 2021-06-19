@@ -42,6 +42,7 @@ Prerequisites:
 
 ### Module improvement
 
+* [ ] Re-enable automatic HACS workflow
 * [ ] Submit it for non-official integration on HACS - in progress
 * [ ] Submit it for official integration!
 * [ ] Make the module async
@@ -61,12 +62,13 @@ Prerequisites:
     * [x] Set to immediate standby (sleep)
     * [x] Retrieve current Voicing
     * [x] (kinda) Play a favorite (but it's only number)
+* v3.0
+    * [x] Retrieve current title and sub-title
 
 Other functionalities:
 
 * Current Playback info
     * [ ] Retrieve current playback source
-    * [ ] Retrieve current title
     * [ ] Retrieve media type: bluetooth, spotify, aux, radio, ...
 * Standby
     * [ ] Set a standby timer
@@ -75,7 +77,7 @@ Other functionalities:
     * [ ] Set Room Setting
     * [ ] Retrieve current Room Setting
 * Favorites
-    * [x] Play a favorite (proper title)
+    * [ ] Play a favorite (proper title)
     * [ ] Set a Favorite
 * Extended current playback info
     * [ ] Set extended playback status: shuffle, repeat

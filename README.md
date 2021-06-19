@@ -24,6 +24,8 @@ Prerequisites:
         name: "Zipp"
     ```
 
+    * You can also add `scan_interval: 2` below `name` if you want higher refresh rate
+
 1. Restart the server
 
 ## Features

@@ -63,55 +63,61 @@ def setup_platform(hass, config, add_entities, discover_info=None):
     host = config[CONF_HOST]
     name = config[CONF_NAME]
 
-    zipp_client = LibratoneZipp(host, name)
+    zipp_client = LibratoneZipp(host)
 
-    add_entities([LibratoneZippDevice(zipp_client)])
+    add_entities([LibratoneZippDevice(zipp_client, name)])
 
 
 class LibratoneZippDevice(MediaPlayerEntity):
     """Representation of a Libratone Zipp speaker."""
 
-    def __init__(self, zipp_client):
+    def __init__(self, zipp_client, name):
         """Initialize a new Libratone Zipp device"""
-        self._zipp_client = zipp_client
-
-        self._name = self._zipp_client.name
-        self._host = self._zipp_client.host
+        self.zipp = zipp_client
+        self._name = name
 
         self._device_type = DEVICE_CLASS_SPEAKER
 
         self._state = None
         self._volume_level = None
 
+        self._sound_mode = None
+        self._sound_mode_list = None
+
+        self._track_name = None
+        self._track_artist = None
+
         # self._source = None
         self._source_list = ["1", "2", "3", "4", "5"]
-
-        self._sound_mode = None
-        self._sound_mode_list = self._zipp_client.voicing_list
 
         self.update()
 
     def update(self):
         """Update the state of this media_player."""
 
+        if self.zipp.name != None:
+            self._name = self.zipp.name
+        self._sound_mode_list = self.zipp.voicing_list
+        self._sound_mode = self.zipp.voicing
+
+        self._track_name = self.zipp.play_title
+        self._track_artist = self.zipp.play_subtitle
+
         # Update of state
-        if self._zipp_client.state == "OFF":
+        if self.zipp.state == "SLEEPING":
             self._state = STATE_OFF
-        elif self._zipp_client.state == "PLAY":
+        elif self.zipp.state == "PLAYING":
             self._state = STATE_PLAYING
-        elif self._zipp_client.state == "PAUSE":
+        elif self.zipp.state == "PAUSED":
             self._state = STATE_PAUSED
-        elif self._zipp_client.state == "STOP":
+        elif self.zipp.state == "STOPPED" or self.zipp.state == "ON":
             self._state = STATE_IDLE
         else:
             self._state = STATE_UNKNOWN
 
         # Update of volume
-        if self._zipp_client.volume != None and self._zipp_client.volume != "":
-            self._volume_level = int(self._zipp_client.volume) / 100
-
-        # Update of sound mode
-        self._sound_mode = self._zipp_client.voicing
+        if self.zipp.volume != None:
+            self._volume_level = int(self.zipp.volume) / 100
 
     @property
     def name(self):
@@ -160,44 +166,54 @@ class LibratoneZippDevice(MediaPlayerEntity):
         """Return the current sound mode."""
         return self._sound_mode_list
 
+    @property
+    def media_title(self):
+        """Title of current playing media."""
+        return self._track_name
+
+    @property
+    def media_artist(self):
+        """Artist of current playing media, music track only."""
+        return self._track_artist
+
     def turn_on(self):
         """Turn the media player on."""
-        return self._zipp_client.wakeup()
+        return self.zipp.wakeup()
 
     def turn_off(self):
         """Turn the media player off."""
-        return self._zipp_client.sleep()
+        return self.zipp.sleep()
 
     def set_volume_level(self, volume):
         """Set volume level, range 0..1."""
         # In order to get a smooth volume slider, volume is overriden here - but it will be updated later anyway
         self._volume_level = volume
-        return self._zipp_client.volume_set(int(volume * 100))
+        return self.zipp.volume_set(int(volume * 100))
 
     def media_play(self):
         """Send play command."""
-        return self._zipp_client.play()
+        return self.zipp.play()
 
     def media_pause(self):
         """Send pause command."""
-        return self._zipp_client.pause()
+        return self.zipp.pause()
 
     def media_stop(self):
         """Send stop command."""
-        return self._zipp_client.stop()
+        return self.zipp.stop()
 
     def media_next_track(self):
         """Send next command."""
-        return self._zipp_client.next()
+        return self.zipp.next()
 
     def media_previous_track(self):
         """Send prev command."""
-        return self._zipp_client.prev()
+        return self.zipp.prev()
 
     def select_source(self, source):
         """Select input source."""
-        return self._zipp_client.favorite_play(source)
+        return self.zipp.favorite_play(source)
 
     def select_sound_mode(self, sound_mode):
         """ "Select sound mode."""
-        return self._zipp_client.voicing_set(sound_mode)
+        return self.zipp.voicing_set(sound_mode)

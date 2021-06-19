@@ -49,6 +49,8 @@ Prerequisites:
 
 ### Functionnality coverage
 
+Current coverage suits me, even if the python integration has much more options. Don't expect new features (only maintenance) but feel free to open an issue or submit a PR!
+
 * v1.0
     * [x] Set up entity in home assistant
     * [x] Basic playback status

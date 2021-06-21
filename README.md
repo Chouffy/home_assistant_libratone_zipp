@@ -27,6 +27,7 @@ This aims to control a Libratone Zipp speaker within [Home Assistant](https://ww
 
 ### Known bugs
 
+* After a restart of Home Assistant, the integration is in an "unknown" state before the 1st music is played
 * On Bluetooth and when the music is playing, you only get "Play" button, not Pause.
 
 ### Functionnality coverage

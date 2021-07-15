@@ -18,6 +18,7 @@ This aims to control a Libratone Zipp speaker within [Home Assistant](https://ww
         scan_interval: 2
     ```
 
+    * Only one speaker is supported!
     * I suggest `scan_interval: 2` to get 2 seconds refresh rate
 
 1. Restart the server
@@ -27,8 +28,11 @@ This aims to control a Libratone Zipp speaker within [Home Assistant](https://ww
 
 ### Known bugs
 
-* After a restart of Home Assistant, the integration is in an "unknown" state before the 1st music is played
-* On Bluetooth and when the music is playing, you only get "Play" button, not Pause.
+* Major:
+    * Only one speaker is supported - this needs this [upstream module issue](https://github.com/Chouffy/python_libratone_zipp/issues/1) to be fixed
+    * On Bluetooth and when the music is playing, you only get "Play" button, not Pause.
+* Minor:
+    * After a restart of Home Assistant, the integration can be in an "unknown" state before the 1st music is played
 
 ### Functionnality coverage
 

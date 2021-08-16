@@ -2,11 +2,19 @@
 
 This aims to control a Libratone Zipp speaker within [Home Assistant](https://www.home-assistant.io/) using [this Python library](https://github.com/Chouffy/python_libratone_zipp).
 
+## Limitations / Known bugs
+
+* Major:
+    * Only one speaker is supported - this needs this [upstream module issue](https://github.com/Chouffy/python_libratone_zipp/issues/1) to be fixed
+    * On Bluetooth and when the music is playing, you only get "Play" button, not Pause.
+* Minor:
+    * After a restart of Home Assistant, the integration can be in an "unknown" state before the 1st music is played
+
 ## Usage
 
 ### Installation via [HACS](https://hacs.xyz/)
 
-1. Add this repository `https://github.com/Chouffy/home_assistant_libratone_zipp` as a custom repository with *integration* type
+1. Search for *Libratone Zipp* in the integration tab of HACS
 1. Click *Install*
 1. Add the following in your `/config/configuration.yaml`:
 
@@ -26,15 +34,7 @@ This aims to control a Libratone Zipp speaker within [Home Assistant](https://ww
 
 ## Features
 
-### Known bugs
-
-* Major:
-    * Only one speaker is supported - this needs this [upstream module issue](https://github.com/Chouffy/python_libratone_zipp/issues/1) to be fixed
-    * On Bluetooth and when the music is playing, you only get "Play" button, not Pause.
-* Minor:
-    * After a restart of Home Assistant, the integration can be in an "unknown" state before the 1st music is played
-
-### Functionnality coverage
+### Functionality coverage
 
 Current coverage suits me, even if the python integration has much more options. Don't expect new features (only maintenance) but feel free to open an issue or submit a PR!
 
@@ -57,10 +57,10 @@ Current coverage suits me, even if the python integration has much more options.
 Other functionalities:
 
 * Module
-    * [ ] Re-enable automatic HACS workflow
-    * [ ] Submit it for non-official integration on HACS - in progress
-    * [ ] Submit it for official integration!
+    * [x] Submit it for non-official integration on HACS - in progress
+    * [x] Re-enable automatic HACS workflow
     * [ ] Make the module async
+    * [ ] Submit it for official integration!
 * Current Playback info
     * [ ] Retrieve current playback source
     * [ ] Retrieve media type: bluetooth, spotify, aux, radio, ...

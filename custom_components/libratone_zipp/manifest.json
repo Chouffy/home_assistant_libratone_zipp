@@ -1,7 +1,7 @@
 {
   "domain": "libratone_zipp",
   "name": "Libratone Zipp",
-  "version": "3.0.0",
+  "version": "3.0.2",
   "documentation": "https://github.com/Chouffy/home_assistant_libratone_zipp",
   "issue_tracker": "https://github.com/Chouffy/home_assistant_libratone_zipp/issues",
   "codeowners": ["@chouffy"],

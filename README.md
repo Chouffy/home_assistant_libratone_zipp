@@ -21,9 +21,9 @@ This aims to control a Libratone Zipp speaker within [Home Assistant](https://ww
     ```yaml
     media_player:
     - platform: libratone_zipp
-        host: 192.168.XX.XX
-        name: Zipp
-        scan_interval: 2
+      host: 192.168.XX.XX
+      name: Zipp
+      scan_interval: 2
     ```
 
     * Only one speaker is supported!

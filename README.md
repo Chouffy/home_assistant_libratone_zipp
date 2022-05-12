@@ -54,7 +54,7 @@ Current coverage suits me, even if the python integration has much more options.
 * v3.0
     * [x] Retrieve current title and sub-title
 
-Other functionalities:
+Other functionalities - Not planned right now:
 
 * Module
     * [x] Submit it for non-official integration on HACS - in progress

@@ -1,6 +1,5 @@
 {
   "name": "Libratone Zipp",
   "render_readme": true,
-  "domains": "media_player",
   "iot_class": "Local Push"
   }

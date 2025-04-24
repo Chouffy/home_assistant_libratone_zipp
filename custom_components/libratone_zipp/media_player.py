@@ -4,7 +4,7 @@ import voluptuous as vol
 
 from homeassistant.components.media_player import PLATFORM_SCHEMA, MediaPlayerEntity
 from homeassistant.components.media_player.const import (
-    MEDIA_TYPE_MUSIC,
+    MediaType,
     MediaPlayerEntityFeature,
 )
 from homeassistant.const import (
@@ -132,7 +132,7 @@ class LibratoneZippDevice(MediaPlayerEntity):
     @property
     def media_content_type(self):
         """Content type of current playing media."""
-        return MEDIA_TYPE_MUSIC
+        return MediaType.MUSIC
 
     '''
     @property

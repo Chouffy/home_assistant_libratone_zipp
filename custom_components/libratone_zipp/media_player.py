@@ -52,11 +52,28 @@ def setup_platform(hass, config, add_entities, discover_info=None):
 
     host = config[CONF_HOST]
     name = config[CONF_NAME]
+    #_LOGGER.warning(f"setup_platform called for host={host}, name={name}")
 
     zipp_client = LibratoneZipp(host)
 
-    add_entities([LibratoneZippDevice(zipp_client, name)])
+    # Bootstrap a bit of state so attributes aren't None on first render
+    try:
+        zipp_client.name_get()
+        zipp_client.version_get()
+        zipp_client.volume_get()
+    except Exception:
+        _LOGGER.debug("Initial bootstrap calls failed; will rely on polling.")
 
+    # Ensure cleanly stop threads/sockets on HA shutdown
+    from homeassistant.const import EVENT_HOMEASSISTANT_STOP
+    def _on_stop(_):
+        try:
+            zipp_client.exit()
+        except Exception:
+            pass
+    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _on_stop)
+
+    add_entities([LibratoneZippDevice(zipp_client, name)])
 
 class LibratoneZippDevice(MediaPlayerEntity):
     """Representation of a Libratone Zipp speaker."""
@@ -108,6 +125,15 @@ class LibratoneZippDevice(MediaPlayerEntity):
         # Update of volume
         if self.zipp.volume != None:
             self._volume_level = int(self.zipp.volume) / 100
+
+    @property
+    def unique_id(self):
+        """Stable id for registry."""
+        serial = getattr(self.zipp, "serialnumber", None)
+        host_tag = str(self.zipp.host).replace(".", "_")
+        if serial:
+            return f"libratone_{serial}_{host_tag}"
+        return f"libratone_{host_tag}"
 
     @property
     def name(self):

@@ -6,5 +6,6 @@
   "issue_tracker": "https://github.com/Chouffy/home_assistant_libratone_zipp/issues",
   "codeowners": ["@chouffy"],
   "requirements": ["python_libratone_zipp==3.0.0"],
-  "iot_class": "local_push"
+  "iot_class": "local_push",  
+  "config_flow": true
 }

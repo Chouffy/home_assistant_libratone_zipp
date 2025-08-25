@@ -1,0 +1,20 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Ajouter un haut-parleur Libratone Zipp",
+        "description": "Entrez l’adresse IP de votre haut-parleur.",
+        "data": {
+          "host": "Hôte / IP",
+          "name": "Nom (optionnel)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Connexion impossible. Vérifiez l’IP et réessayez."
+    },
+    "abort": {
+      "already_configured": "Ce haut-parleur est déjà configuré."
+    }
+  }
+}

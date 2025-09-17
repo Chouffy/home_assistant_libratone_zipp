@@ -20,7 +20,7 @@ This aims to control a Libratone Zipp speaker within [Home Assistant](https://ww
 1. Add the IP of the speaker and a name
 1. Repeat the last step if you have multiple speakers
 
-Note: if you're using Docker/devcontainer, you need to forward `3333/udp` and `7778/udp`. THis 
+Note: if you're using Docker/devcontainer, you need to forward `3333/udp` and `7778/udp`. 
 
 ## Features
 

@@ -5,7 +5,6 @@ This aims to control a Libratone Zipp speaker within [Home Assistant](https://ww
 ## Limitations / Known bugs
 
 * Major:
-    * Only one speaker is supported - this needs this [upstream module issue](https://github.com/Chouffy/python_libratone_zipp/issues/1) to be fixed
     * On Bluetooth and when the music is playing, you only get "Play" button, not Pause.
 * Minor:
     * After a restart of Home Assistant, the integration can be in an "unknown" state before the 1st music is played
@@ -16,21 +15,12 @@ This aims to control a Libratone Zipp speaker within [Home Assistant](https://ww
 
 1. Search for *Libratone Zipp* in the integration tab of HACS
 1. Click *Install*
-1. Add the following in your `/config/configuration.yaml`:
+1. Restart Home Assistant
+1. Go to _Settings_ → _Devices & services_ → _Add integration_ and search for **Libratone Zipp**
+1. Add the IP of the speaker and a name
+1. Repeat the last step if you have multiple speakers
 
-    ```yaml
-    media_player:
-    - platform: libratone_zipp
-      host: 192.168.XX.XX
-      name: Zipp
-      scan_interval: 2
-    ```
-
-    * Only one speaker is supported!
-    * I suggest `scan_interval: 2` to get 2 seconds refresh rate
-
-1. Restart the server
-1. You need to forward `3333/udp` and `7778/udp` if you're using Docker/devcontainer
+Note: if you're using Docker/devcontainer, you need to forward `3333/udp` and `7778/udp`. THis 
 
 ## Features
 
@@ -53,12 +43,13 @@ Current coverage suits me, even if the python integration has much more options.
     * [x] (kinda) Play a favorite (but it's only number)
 * v3.0
     * [x] Retrieve current title and sub-title
+* v4.0
+    * [x] Manage multiple speakers
+    * [x] Add/Remove speakers via Web interface (no `configuration.yaml` anymore!)
 
 Other functionalities - Not planned right now:
 
 * Module
-    * [x] Submit it for non-official integration on HACS - in progress
-    * [x] Re-enable automatic HACS workflow
     * [ ] Make the module async
     * [ ] Submit it for official integration!
 * Current Playback info

@@ -1,0 +1,21 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Libratone Zipp-Lautsprecher hinzufügen",
+        "description": "Geben Sie die IP-Adresse Ihres Lautsprechers ein.",
+        "data": {
+          "host": "Host / IP",
+          "name": "Name (optional)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung fehlgeschlagen. Überprüfen Sie die IP und versuchen Sie es erneut."
+    },
+    "abort": {
+      "already_configured": "Dieser Lautsprecher ist bereits konfiguriert."
+    }
+  }
+}
+

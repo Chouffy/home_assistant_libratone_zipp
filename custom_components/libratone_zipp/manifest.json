@@ -1,10 +1,11 @@
 {
   "domain": "libratone_zipp",
   "name": "Libratone Zipp",
-  "version": "3.0.6",
+  "version": "4.0.0",
   "documentation": "https://github.com/Chouffy/home_assistant_libratone_zipp",
   "issue_tracker": "https://github.com/Chouffy/home_assistant_libratone_zipp/issues",
-  "codeowners": ["@chouffy"],
-  "requirements": ["python_libratone_zipp==3.0.0"],
-  "iot_class": "local_push"
+  "codeowners": ["@chouffy", "@Calyorbro"],
+  "requirements": ["python_libratone_zipp==4.0.0"],
+  "iot_class": "local_push",  
+  "config_flow": true
 }

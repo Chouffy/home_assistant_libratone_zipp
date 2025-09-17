@@ -1,0 +1,20 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Agregar altavoz Libratone Zipp",
+        "description": "Introduce la dirección IP de tu altavoz.",
+        "data": {
+          "host": "Host / IP",
+          "name": "Nombre (opcional)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "No se puede conectar. Comprueba la IP e inténtalo de nuevo."
+    },
+    "abort": {
+      "already_configured": "Este altavoz ya está configurado."
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add Libratone Zipp speaker",
+        "description": "Enter the IP address of your speaker.",
+        "data": {
+          "host": "Host / IP",
+          "name": "Name (optional)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Can't connect. Check the IP and try again."
+    },
+    "abort": {
+      "already_configured": "This speaker is already configured."
+    }
+  }
+}

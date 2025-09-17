@@ -1,8 +1,20 @@
 import logging
-from python_libratone_zipp import LibratoneZipp
 import voluptuous as vol
 
+# Prefer vendored lib during dev. Fall back to PyPI if not present
+try:
+    from .vendor.python_libratone_zipp.python_libratone_zipp import LibratoneZipp  # type: ignore
+except Exception:  # pragma: no cover
+    from python_libratone_zipp import LibratoneZipp  # type: ignore
+
 from homeassistant.components.media_player import PLATFORM_SCHEMA, MediaPlayerEntity
+from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from .const import DOMAIN
+from homeassistant.const import CONF_NAME
+
+
 from homeassistant.components.media_player.const import (
     MediaType,
     MediaPlayerEntityFeature,
@@ -47,16 +59,43 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 _LOGGER = logging.getLogger("LibratoneZippDevice")
 
 
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up from a config entry."""
+    zipp_client = hass.data[DOMAIN][entry.entry_id]
+    name = entry.title or entry.data.get(CONF_NAME) or DEFAULT_NAME
+    async_add_entities([LibratoneZippDevice(zipp_client, name)])
+
 def setup_platform(hass, config, add_entities, discover_info=None):
     """Set up Libratone Zipp"""
 
     host = config[CONF_HOST]
     name = config[CONF_NAME]
+    #_LOGGER.warning(f"setup_platform called for host={host}, name={name}")
 
     zipp_client = LibratoneZipp(host)
 
-    add_entities([LibratoneZippDevice(zipp_client, name)])
+    # Bootstrap a bit of state so attributes aren't None on first render
+    try:
+        zipp_client.name_get()
+        zipp_client.version_get()
+        zipp_client.volume_get()
+    except Exception:
+        _LOGGER.debug("Initial bootstrap calls failed; will rely on polling.")
 
+    # Ensure cleanly stop threads/sockets on HA shutdown
+    from homeassistant.const import EVENT_HOMEASSISTANT_STOP
+    def _on_stop(_):
+        try:
+            zipp_client.exit()
+        except Exception:
+            pass
+    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _on_stop)
+
+    add_entities([LibratoneZippDevice(zipp_client, name)])
 
 class LibratoneZippDevice(MediaPlayerEntity):
     """Representation of a Libratone Zipp speaker."""
@@ -108,6 +147,15 @@ class LibratoneZippDevice(MediaPlayerEntity):
         # Update of volume
         if self.zipp.volume != None:
             self._volume_level = int(self.zipp.volume) / 100
+
+    @property
+    def unique_id(self):
+        """Stable id for registry."""
+        serial = getattr(self.zipp, "serialnumber", None)
+        host_tag = str(self.zipp.host).replace(".", "_")
+        if serial:
+            return f"libratone_{serial}_{host_tag}"
+        return f"libratone_{host_tag}"
 
     @property
     def name(self):

@@ -1,0 +1,20 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Legg til Libratone Zipp-høyttaler",
+        "description": "Skriv inn IP-adressen til høyttaleren din.",
+        "data": {
+          "host": "Vert / IP",
+          "name": "Navn (valgfritt)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Kan ikke koble til. Kontroller IP-en og prøv igjen."
+    },
+    "abort": {
+      "already_configured": "Denne høyttaleren er allerede konfigurert."
+    }
+  }
+}

@@ -1,5 +1,6 @@
 import logging
 import voluptuous as vol
+from datetime import timedelta
 
 # Prefer vendored lib during dev. Fall back to PyPI if not present
 try:
@@ -58,6 +59,10 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 
 _LOGGER = logging.getLogger("LibratoneZippDevice")
 
+GROUPS = {}           # link_id -> set(entity)
+ALL_ENTITIES = set()  # all Libratone Zipp media player entities
+# Poll a bit more frequently so UI reflects native group changes quickly.
+SCAN_INTERVAL = timedelta(seconds=5)
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -116,6 +121,12 @@ class LibratoneZippDevice(MediaPlayerEntity):
         self._track_name = None
         self._track_artist = None
 
+        # Grouping (filled from libratone lib's parsed notifications)
+        self._group_status = None
+        self._group_link_id = None
+
+        ALL_ENTITIES.add(self)
+
         # self._source = None
         self._source_list = ["1", "2", "3", "4", "5"]
 
@@ -148,6 +159,22 @@ class LibratoneZippDevice(MediaPlayerEntity):
         if self.zipp.volume != None:
             self._volume_level = int(self.zipp.volume) / 100
 
+        # --- NEW: native multiroom reflection ---
+        # The library sets these when it receives UDP 3333 notifications (cmd 103).
+        self._group_status = getattr(self.zipp, "group_status", None)
+        self._group_link_id = getattr(self.zipp, "group_link_id", None)
+
+        # 1) remove from all existing groups
+        for members in GROUPS.values():
+            members.discard(self)
+        # 2) add to current group if grouped
+        if self._group_status == "GROUPED" and self._group_link_id:
+            GROUPS.setdefault(self._group_link_id, set()).add(self)
+        # 3) prune empties 
+        for lid in list(GROUPS.keys()):
+            if not GROUPS[lid]:
+                GROUPS.pop(lid, None)
+
     @property
     def unique_id(self):
         """Stable id for registry."""
@@ -175,8 +202,8 @@ class LibratoneZippDevice(MediaPlayerEntity):
     @property
     def supported_features(self):
         """Flag media player features that are supported."""
-        return SUPPORT_LIBRATONE_ZIPP
-
+        return SUPPORT_LIBRATONE_ZIPP | MediaPlayerEntityFeature.GROUPING
+ 
     @property
     def media_content_type(self):
         """Content type of current playing media."""
@@ -213,7 +240,20 @@ class LibratoneZippDevice(MediaPlayerEntity):
     def media_artist(self):
         """Artist of current playing media, music track only."""
         return self._track_artist
+    @property
+    def extra_state_attributes(self):
+        # Handy to see in Dev Tools → States while testing
+        return {
+            "libratone_group_status": self._group_status,
+            "libratone_group_link_id": self._group_link_id,
+        }
 
+    @property
+    def group_members(self):
+        """List of entity_ids that are in the same native group (HA reads this)."""
+        if self._group_status == "GROUPED" and self._group_link_id in GROUPS:
+            return [e.entity_id for e in GROUPS[self._group_link_id]]
+        return None
     def turn_on(self):
         """Turn the media player on."""
         return self.zipp.wakeup()

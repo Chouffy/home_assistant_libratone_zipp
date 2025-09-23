@@ -302,7 +302,7 @@ class LibratoneZippDevice(MediaPlayerEntity):
         return self.zipp.voicing_set(sound_mode)
 
     async def async_join_players(self, group_members: list[str]):
-        # Use this entity’s current link_id as the coordinator’s group id.
+        # Use this entity's current link_id as the coordinator’s group id.
         link_id = self._group_link_id
         if not link_id:
             # If coordinator isn’t grouped yet, make/choose a link_id
@@ -310,7 +310,7 @@ class LibratoneZippDevice(MediaPlayerEntity):
             if not link_id:
                 link_id = f"{self.name}_{hash(self.unique_id) & 0xffffffff}"
 
-        # NEW: ensure the target (self) is in the group
+        # ensure the target (self) is in the group
         if self._group_status != "GROUPED" or self._group_link_id != link_id:
             await self.hass.async_add_executor_job(self.zipp.group_join, link_id)
 

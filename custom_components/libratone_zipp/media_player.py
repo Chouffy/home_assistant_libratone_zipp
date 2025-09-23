@@ -317,7 +317,7 @@ class LibratoneZippDevice(MediaPlayerEntity):
                 continue
             await self.hass.async_add_executor_job(ent.zipp.group_join, link_id)
 
-        # Let your polling/notifications refresh group_members
+        # Let polling/notifications refresh group_members
         self.async_write_ha_state()
 
     async def async_unjoin_player(self):

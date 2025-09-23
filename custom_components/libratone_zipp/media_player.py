@@ -172,20 +172,22 @@ class LibratoneZippDevice(MediaPlayerEntity):
         # 2) add to current group if grouped
         if self._group_status == "GROUPED" and self._group_link_id:
             GROUPS.setdefault(self._group_link_id, set()).add(self)
-        # 3) prune empties 
+        # 3) prune empties
         for lid in list(GROUPS.keys()):
             if not GROUPS[lid]:
                 GROUPS.pop(lid, None)
 
     @property
-    def unique_id(self) -> str | None:
-        """Stable id for registry based only on IP/host."""
+    def unique_id(self):
+        """Stable id for registry: one entity per IP/host."""
         host = getattr(self.zipp, "host", None)
         if not host:
-            return None  # don't register until we at least know the IP
-        # normalize IPv4/IPv6 + optional port, if any
+            return None
+        # normalize IPv4/IPv6 for registry safety
         host_tag = str(host).replace(".", "_").replace(":", "_").lower()
-        return f"{DOMAIN}_{host_tag}"
+        return f"libratone_{host_tag}"
+
+
     @property
     def name(self):
         """Return the name of the device."""
@@ -205,7 +207,7 @@ class LibratoneZippDevice(MediaPlayerEntity):
     def supported_features(self):
         """Flag media player features that are supported."""
         return SUPPORT_LIBRATONE_ZIPP | MediaPlayerEntityFeature.GROUPING
- 
+
     @property
     def media_content_type(self):
         """Content type of current playing media."""
@@ -253,10 +255,10 @@ class LibratoneZippDevice(MediaPlayerEntity):
 
     @property
     def group_members(self):
-        """List of entity_ids that are in the same native group (HA reads this)."""
         if self._group_status == "GROUPED" and self._group_link_id in GROUPS:
-            return [e.entity_id for e in GROUPS[self._group_link_id]]
+            return [e.entity_id for e in GROUPS[self._group_link_id] if e is not self]
         return None
+
     def turn_on(self):
         """Turn the media player on."""
         return self.zipp.wakeup()
@@ -303,12 +305,14 @@ class LibratoneZippDevice(MediaPlayerEntity):
         # Use this entity’s current link_id as the coordinator’s group id.
         link_id = self._group_link_id
         if not link_id:
-            # If coordinator isn’t grouped yet, use its own (the first LINK will cause the
-            # speakers to advertise it via notifications you already parse).
+            # If coordinator isn’t grouped yet, make/choose a link_id
             link_id = getattr(self.zipp, "group_link_id", None)
             if not link_id:
-                # As a fallback, build one deterministically from the device name (not strictly required)
                 link_id = f"{self.name}_{hash(self.unique_id) & 0xffffffff}"
+
+        # NEW: ensure the target (self) is in the group
+        if self._group_status != "GROUPED" or self._group_link_id != link_id:
+            await self.hass.async_add_executor_job(self.zipp.group_join, link_id)
 
         # Ask each selected member to LINK to this link_id (join)
         for ent_id in group_members:
@@ -324,4 +328,3 @@ class LibratoneZippDevice(MediaPlayerEntity):
         lid = self._group_link_id
         await self.hass.async_add_executor_job(self.zipp.group_leave, lid)
         self.async_write_ha_state()
-

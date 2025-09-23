@@ -178,14 +178,14 @@ class LibratoneZippDevice(MediaPlayerEntity):
                 GROUPS.pop(lid, None)
 
     @property
-    def unique_id(self):
-        """Stable id for registry."""
-        serial = getattr(self.zipp, "serialnumber", None)
-        host_tag = str(self.zipp.host).replace(".", "_")
-        if serial:
-            return f"libratone_{serial}_{host_tag}"
-        return f"libratone_{host_tag}"
-
+    def unique_id(self) -> str | None:
+        """Stable id for registry based only on IP/host."""
+        host = getattr(self.zipp, "host", None)
+        if not host:
+            return None  # don't register until we at least know the IP
+        # normalize IPv4/IPv6 + optional port, if any
+        host_tag = str(host).replace(".", "_").replace(":", "_").lower()
+        return f"{DOMAIN}_{host_tag}"
     @property
     def name(self):
         """Return the name of the device."""

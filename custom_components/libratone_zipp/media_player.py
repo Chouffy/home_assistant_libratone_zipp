@@ -124,6 +124,7 @@ class LibratoneZippDevice(MediaPlayerEntity):
         # Grouping (filled from libratone lib's parsed notifications)
         self._group_status = None
         self._group_link_id = None
+        self._group_role = None
 
         ALL_ENTITIES.add(self)
 
@@ -163,6 +164,7 @@ class LibratoneZippDevice(MediaPlayerEntity):
         # The library sets these when it receives UDP 3333 notifications (cmd 103).
         self._group_status = getattr(self.zipp, "group_status", None)
         self._group_link_id = getattr(self.zipp, "group_link_id", None)
+        self._group_role = getattr(self.zipp, "group_role", None)
 
         # 1) remove from all existing groups
         for members in GROUPS.values():
@@ -246,6 +248,7 @@ class LibratoneZippDevice(MediaPlayerEntity):
         return {
             "libratone_group_status": self._group_status,
             "libratone_group_link_id": self._group_link_id,
+            "libratone_group_role": self._group_role,
         }
 
     @property
@@ -295,3 +298,30 @@ class LibratoneZippDevice(MediaPlayerEntity):
     def select_sound_mode(self, sound_mode):
         """ "Select sound mode."""
         return self.zipp.voicing_set(sound_mode)
+
+    async def async_join_players(self, group_members: list[str]):
+        # Use this entity’s current link_id as the coordinator’s group id.
+        link_id = self._group_link_id
+        if not link_id:
+            # If coordinator isn’t grouped yet, use its own (the first LINK will cause the
+            # speakers to advertise it via notifications you already parse).
+            link_id = getattr(self.zipp, "group_link_id", None)
+            if not link_id:
+                # As a fallback, build one deterministically from the device name (not strictly required)
+                link_id = f"{self.name}_{hash(self.unique_id) & 0xffffffff}"
+
+        # Ask each selected member to LINK to this link_id (join)
+        for ent_id in group_members:
+            ent = next((e for e in ALL_ENTITIES if e.entity_id == ent_id), None)
+            if not ent:
+                continue
+            await self.hass.async_add_executor_job(ent.zipp.group_join, link_id)
+
+        # Let your polling/notifications refresh group_members
+        self.async_write_ha_state()
+
+    async def async_unjoin_player(self):
+        lid = self._group_link_id
+        await self.hass.async_add_executor_job(self.zipp.group_leave, lid)
+        self.async_write_ha_state()
+

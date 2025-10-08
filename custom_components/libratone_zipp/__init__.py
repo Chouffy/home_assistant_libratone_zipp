@@ -15,7 +15,7 @@ try:
 except Exception:  # pragma: no cover
     from python_libratone_zipp import LibratoneZipp  # type: ignore
 
-__version__ = "4.0.0"
+__version__ = "4.1.0"
 TARGET_CONFIG_ENTRY_VERSION = 2  # bump this when we change unique_id format
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

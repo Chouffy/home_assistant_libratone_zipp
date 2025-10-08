@@ -46,12 +46,16 @@ Current coverage suits me, even if the python integration has much more options.
 * v4.0
     * [x] Manage multiple speakers
     * [x] Add/Remove speakers via Web interface (no `configuration.yaml` anymore!)
+* v4.1 
+    * [x] Implement SoundSpace Link
+
 
 Other functionalities - Not planned right now:
 
 * Module
     * [ ] Make the module async
     * [ ] Submit it for official integration!
+    * [ ] Add support for other libratone speakers
 * Current Playback info
     * [ ] Retrieve current playback source
     * [ ] Retrieve media type: bluetooth, spotify, aux, radio, ...
@@ -70,7 +74,8 @@ Other functionalities - Not planned right now:
     * [ ] Set Source
     * [ ] Retrieve current source
 * Multi-room
-    * [ ] Implement SoundSpace Link
+    * [ ] Set speaker mode (stereo, left, right)
+    * [ ] Add better media player cards
 
 ## Acknowledgment
 

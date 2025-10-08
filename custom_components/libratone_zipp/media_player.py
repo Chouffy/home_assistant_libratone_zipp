@@ -1,5 +1,6 @@
 import logging
 import voluptuous as vol
+from datetime import timedelta
 
 # Prefer vendored lib during dev. Fall back to PyPI if not present
 try:
@@ -58,6 +59,10 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 
 _LOGGER = logging.getLogger("LibratoneZippDevice")
 
+GROUPS = {}           # link_id -> set(entity)
+ALL_ENTITIES = set()  # all Libratone Zipp media player entities
+# Poll a bit more frequently so UI reflects native group changes quickly.
+SCAN_INTERVAL = timedelta(seconds=5)
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -116,6 +121,13 @@ class LibratoneZippDevice(MediaPlayerEntity):
         self._track_name = None
         self._track_artist = None
 
+        # Grouping (filled from libratone lib's parsed notifications)
+        self._group_status = None
+        self._group_link_id = None
+        self._group_role = None
+
+        ALL_ENTITIES.add(self)
+
         # self._source = None
         self._source_list = ["1", "2", "3", "4", "5"]
 
@@ -148,14 +160,33 @@ class LibratoneZippDevice(MediaPlayerEntity):
         if self.zipp.volume != None:
             self._volume_level = int(self.zipp.volume) / 100
 
+        # --- NEW: native multiroom reflection ---
+        # The library sets these when it receives UDP 3333 notifications (cmd 103).
+        self._group_status = getattr(self.zipp, "group_status", None)
+        self._group_link_id = getattr(self.zipp, "group_link_id", None)
+        self._group_role = getattr(self.zipp, "group_role", None)
+
+        # 1) remove from all existing groups
+        for members in GROUPS.values():
+            members.discard(self)
+        # 2) add to current group if grouped
+        if self._group_status == "GROUPED" and self._group_link_id:
+            GROUPS.setdefault(self._group_link_id, set()).add(self)
+        # 3) prune empties
+        for lid in list(GROUPS.keys()):
+            if not GROUPS[lid]:
+                GROUPS.pop(lid, None)
+
     @property
     def unique_id(self):
-        """Stable id for registry."""
-        serial = getattr(self.zipp, "serialnumber", None)
-        host_tag = str(self.zipp.host).replace(".", "_")
-        if serial:
-            return f"libratone_{serial}_{host_tag}"
+        """Stable id for registry: one entity per IP/host."""
+        host = getattr(self.zipp, "host", None)
+        if not host:
+            return None
+        # normalize IPv4/IPv6 for registry safety
+        host_tag = str(host).replace(".", "_").replace(":", "_").lower()
         return f"libratone_{host_tag}"
+
 
     @property
     def name(self):
@@ -175,7 +206,7 @@ class LibratoneZippDevice(MediaPlayerEntity):
     @property
     def supported_features(self):
         """Flag media player features that are supported."""
-        return SUPPORT_LIBRATONE_ZIPP
+        return SUPPORT_LIBRATONE_ZIPP | MediaPlayerEntityFeature.GROUPING
 
     @property
     def media_content_type(self):
@@ -213,6 +244,20 @@ class LibratoneZippDevice(MediaPlayerEntity):
     def media_artist(self):
         """Artist of current playing media, music track only."""
         return self._track_artist
+    @property
+    def extra_state_attributes(self):
+        # Handy to see in Dev Tools → States while testing
+        return {
+            "libratone_group_status": self._group_status,
+            "libratone_group_link_id": self._group_link_id,
+            "libratone_group_role": self._group_role,
+        }
+
+    @property
+    def group_members(self):
+        if self._group_status == "GROUPED" and self._group_link_id in GROUPS:
+            return [e.entity_id for e in GROUPS[self._group_link_id] if e is not self]
+        return None
 
     def turn_on(self):
         """Turn the media player on."""
@@ -255,3 +300,31 @@ class LibratoneZippDevice(MediaPlayerEntity):
     def select_sound_mode(self, sound_mode):
         """ "Select sound mode."""
         return self.zipp.voicing_set(sound_mode)
+
+    async def async_join_players(self, group_members: list[str]):
+        # Use this entity's current link_id as the coordinator’s group id.
+        link_id = self._group_link_id
+        if not link_id:
+            # If coordinator isn’t grouped yet, make/choose a link_id
+            link_id = getattr(self.zipp, "group_link_id", None)
+            if not link_id:
+                link_id = f"{self.name}_{hash(self.unique_id) & 0xffffffff}"
+
+        # ensure the target (self) is in the group
+        if self._group_status != "GROUPED" or self._group_link_id != link_id:
+            await self.hass.async_add_executor_job(self.zipp.group_join, link_id)
+
+        # Ask each selected member to LINK to this link_id (join)
+        for ent_id in group_members:
+            ent = next((e for e in ALL_ENTITIES if e.entity_id == ent_id), None)
+            if not ent:
+                continue
+            await self.hass.async_add_executor_job(ent.zipp.group_join, link_id)
+
+        # Let polling/notifications refresh group_members
+        self.async_write_ha_state()
+
+    async def async_unjoin_player(self):
+        lid = self._group_link_id
+        await self.hass.async_add_executor_job(self.zipp.group_leave, lid)
+        self.async_write_ha_state()

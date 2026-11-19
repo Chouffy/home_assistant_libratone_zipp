@@ -133,8 +133,8 @@ def _migrate_to_serial(hass: HomeAssistant, entry: ConfigEntry, spk: LibratoneSp
     # A device created before the serial was known is keyed by entry_id; re-key it
     # (removing it would also delete its entities and lose the entity_ids).
     dev_reg = dr.async_get(hass)
-    device = dev_reg.async_get_device(identifiers={(DOMAIN, entry.entry_id)})
-    if device is not None and not dev_reg.async_get_device(identifiers={(DOMAIN, spk.serial)}):
+    device = dev_reg.async_get_device_by_identifier((DOMAIN, entry.entry_id), entry.entry_id)
+    if device is not None and not dev_reg.async_get_device_by_identifier((DOMAIN, spk.serial), entry.entry_id):
         dev_reg.async_update_device(
             device.id, new_identifiers={(DOMAIN, spk.serial)}, serial_number=spk.serial
         )

@@ -42,11 +42,16 @@ def _json(text: str) -> Any:
 class LibratoneSpeaker:
     """One speaker. Identified by serial number; host may change at any time."""
 
-    def __init__(self, hub: "LibratoneHub", host: str, serial: str | None = None, name: str | None = None) -> None:
+    def __init__(
+        self, hub: "LibratoneHub", host: str, serial: str | None = None,
+        name: str | None = None, aliases: tuple[str, ...] = (),
+    ) -> None:
         self.hub = hub
         self.host = host
         self.serial = serial
         self.expected_name = name   # used to re-identify legacy entries that have no serial yet
+        # other names the speaker may answer with (entry title vs. stored device name)
+        self.aliases = {n.casefold() for n in (name, *aliases) if n}
         self.name: str | None = None
         self.entity_id: str | None = None  # set by the HA layer, used for group member lists
 

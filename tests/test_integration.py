@@ -45,7 +45,9 @@ async def setup(hass: HomeAssistant, entry: MockConfigEntry) -> None:
 async def test_legacy_entry_with_stale_ip_is_found_and_migrated(hass: HomeAssistant, fakes) -> None:
     """The real-world bug: entry says .26 (old DHCP lease), speaker now lives elsewhere."""
     await fakes("127.0.0.3", serial=LEGOLAS, name="Legolas", player=SPOTIFY_PLAYER)
-    entry = entry_for("127.0.0.26", "Legolas")  # legacy: no serial, unique_id = IP
+    # exactly like the real v4 entry: title Legolas, stored name = factory name, unique_id = IP
+    entry = MockConfigEntry(domain=DOMAIN, title="Legolas", unique_id="127.0.0.26",
+                            data={"host": "127.0.0.26", "name": "LibratoneZipp1A2B3C"})
     ent_reg = er.async_get(hass)
     entry.add_to_hass(hass)
     ent_reg.async_get_or_create(

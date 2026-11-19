@@ -74,7 +74,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: LibratoneConfigEntry) ->
         _LOGGER.error("Speaker %s is configured twice; ignoring entry %s", serial, entry.title)
         return False
 
-    spk = hub.add_speaker(entry.data[CONF_HOST], serial, entry.data.get(CONF_NAME) or entry.title)
+    # v4 entries may store the factory name (e.g. LibratoneZipp1A2B3C) while the title is the
+    # real name, so accept both when re-identifying a speaker by name
+    spk = hub.add_speaker(
+        entry.data[CONF_HOST], serial, entry.title or entry.data.get(CONF_NAME),
+        aliases=tuple(n for n in (entry.data.get(CONF_NAME),) if n),
+    )
     entry.runtime_data = spk
 
     if not spk.serial:

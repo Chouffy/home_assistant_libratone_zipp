@@ -88,8 +88,10 @@ class LibratoneHub:
         self._result = self._notify = self._task = None
 
     # ------------------------------------------------------------------ registry
-    def add_speaker(self, host: str, serial: str | None, name: str | None) -> LibratoneSpeaker:
-        spk = LibratoneSpeaker(self, host, serial=serial, name=name)
+    def add_speaker(
+        self, host: str, serial: str | None, name: str | None, aliases: tuple[str, ...] = ()
+    ) -> LibratoneSpeaker:
+        spk = LibratoneSpeaker(self, host, serial=serial, name=name, aliases=aliases)
         self.speakers.append(spk)
         spk.refresh(full=True)
         return spk
@@ -217,7 +219,7 @@ class LibratoneHub:
             # legacy entry without serial: match by name, only if that speaker is missing
             matches = [s for s in self.speakers
                        if s.serial is None and not s.available
-                       and (s.expected_name or "").casefold() == name.casefold()]
+                       and name.casefold() in s.aliases]
             if len(matches) == 1 and (serial is None or not self.by_serial(serial)):
                 spk = matches[0]
                 if serial:

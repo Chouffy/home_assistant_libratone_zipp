@@ -1,21 +1,34 @@
 {
   "config": {
+    "flow_title": "{name}",
     "step": {
       "user": {
         "title": "Libratone Zipp-Lautsprecher hinzufügen",
-        "description": "Geben Sie die IP-Adresse Ihres Lautsprechers ein.",
+        "description": "Gib die IP-Adresse des Lautsprechers ein. Sie muss nur einmal stimmen: Danach wird der Lautsprecher über die Seriennummer verfolgt, auch wenn sich die IP ändert.",
         "data": {
           "host": "Host / IP",
           "name": "Name (optional)"
         }
+      },
+      "zeroconf_confirm": {
+        "title": "Libratone-Lautsprecher gefunden",
+        "description": "{name} ({host}) hinzufügen?"
       }
     },
     "error": {
-      "cannot_connect": "Verbindung fehlgeschlagen. Überprüfen Sie die IP und versuchen Sie es erneut."
+      "cannot_connect": "Der Lautsprecher antwortet nicht. Prüfe die IP und ob die UDP-Ports 3333 und 7778 Home Assistant erreichen."
     },
     "abort": {
-      "already_configured": "Dieser Lautsprecher ist bereits konfiguriert."
+      "already_configured": "Dieser Lautsprecher ist bereits konfiguriert.",
+      "not_libratone": "Kein Libratone-Lautsprecher.",
+      "cannot_connect": "Der Lautsprecher antwortet nicht."
+    }
+  },
+  "entity": {
+    "select": {
+      "room_placement": {
+        "name": "Raumposition"
+      }
     }
   }
 }
-

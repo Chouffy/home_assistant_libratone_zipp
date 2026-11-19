@@ -1,0 +1,201 @@
+"""End-to-end tests against fake speakers on loopback addresses."""
+from __future__ import annotations
+
+import asyncio
+from ipaddress import ip_address
+
+from homeassistant import config_entries
+from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+from custom_components.libratone_zipp.const import CONF_SERIAL, DOMAIN
+from custom_components.libratone_zipp.protocol import Cmd
+
+from .fake_speaker import SPOTIFY_PLAYER
+
+LEGOLAS = "1234-H0032000-07-00001"
+ARWEN = "1234-H0032000-07-00002"
+
+
+async def wait_for(predicate, timeout: float = 8.0) -> None:
+    loop = asyncio.get_running_loop()
+    end = loop.time() + timeout
+    while not predicate():
+        if loop.time() > end:
+            raise AssertionError("condition not met in time")
+        await asyncio.sleep(0.05)
+
+
+def entry_for(host: str, name: str, serial: str | None = None) -> MockConfigEntry:
+    data = {"host": host, "name": name}
+    if serial:
+        data[CONF_SERIAL] = serial
+    return MockConfigEntry(domain=DOMAIN, title=name, unique_id=serial or host, data=data)
+
+
+async def setup(hass: HomeAssistant, entry: MockConfigEntry) -> None:
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+
+async def test_legacy_entry_with_stale_ip_is_found_and_migrated(hass: HomeAssistant, fakes) -> None:
+    """The real-world bug: entry says .26 (old DHCP lease), speaker now lives elsewhere."""
+    await fakes("127.0.0.3", serial=LEGOLAS, name="Legolas", player=SPOTIFY_PLAYER)
+    entry = entry_for("127.0.0.26", "Legolas")  # legacy: no serial, unique_id = IP
+    ent_reg = er.async_get(hass)
+    entry.add_to_hass(hass)
+    ent_reg.async_get_or_create(
+        "media_player", DOMAIN, "libratone_127_0_0_26", config_entry=entry,
+        suggested_object_id="libratonezipp1a2b3c",
+    )
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert entry.data["host"] == "127.0.0.3"
+    assert entry.data[CONF_SERIAL] == LEGOLAS
+    assert entry.unique_id == LEGOLAS
+    # entity_id kept, unique_id moved to the serial
+    ent = ent_reg.async_get("media_player.libratonezipp1a2b3c")
+    assert ent is not None and ent.unique_id == f"libratone_{LEGOLAS}"
+
+    await wait_for(lambda: hass.states.get("media_player.libratonezipp1a2b3c").state == "playing")
+    attrs = hass.states.get("media_player.libratonezipp1a2b3c").attributes
+    assert attrs["media_title"] == "Sweet Child O' Mine"
+    assert attrs["media_artist"] == "Guns N' Roses"
+    assert attrs["media_album_name"] == "Appetite For Destruction"
+    assert attrs["media_playlist"] == "Don't Stop Believin' Radio"
+    assert attrs["source"] == "Spotify"
+    assert attrs["sound_mode"] == "Rock the house"
+    assert attrs["volume_level"] == 0.16
+    assert attrs["source_list"][0] == "1: BBC Radio 6 Music"
+    assert "entity_picture" in attrs
+
+
+async def test_speaker_changes_ip_while_running(hass: HomeAssistant, fakes) -> None:
+    arwen = await fakes("127.0.0.2", serial=ARWEN, name="Arwen")
+    entry = entry_for("127.0.0.2", "Arwen", ARWEN)
+    await setup(hass, entry)
+    entity_id = "media_player.arwen"
+    await wait_for(lambda: hass.states.get(entity_id).state == "playing")
+
+    await arwen.move("127.0.0.5")       # speaker sleeps, comes back with a new lease
+    await wait_for(lambda: hass.states.get(entity_id).state == "unavailable")
+    await wait_for(lambda: entry.data["host"] == "127.0.0.5")
+    await wait_for(lambda: hass.states.get(entity_id).state == "playing")
+
+
+async def test_unavailable_then_back_on_same_ip(hass: HomeAssistant, fakes) -> None:
+    arwen = await fakes("127.0.0.2", serial=ARWEN, name="Arwen")
+    await setup(hass, entry_for("127.0.0.2", "Arwen", ARWEN))
+    await wait_for(lambda: hass.states.get("media_player.arwen").state == "playing")
+    arwen.stop()
+    await wait_for(lambda: hass.states.get("media_player.arwen").state == "unavailable")
+    await arwen.start("127.0.0.2")
+    await wait_for(lambda: hass.states.get("media_player.arwen").state == "playing")
+
+
+async def test_controls(hass: HomeAssistant, fakes) -> None:
+    arwen = await fakes("127.0.0.2", serial=ARWEN, name="Arwen")
+    await setup(hass, entry_for("127.0.0.2", "Arwen", ARWEN))
+    eid = "media_player.arwen"
+    await wait_for(lambda: hass.states.get(eid).state == "playing")
+
+    await hass.services.async_call("media_player", "volume_set", {"entity_id": eid, "volume_level": 0.3}, blocking=True)
+    await hass.services.async_call("media_player", "select_sound_mode", {"entity_id": eid, "sound_mode": "Neutral"}, blocking=True)
+    await hass.services.async_call("media_player", "select_source", {"entity_id": eid, "source": "3: Radio Paradise"}, blocking=True)
+    await hass.services.async_call("media_player", "media_pause", {"entity_id": eid}, blocking=True)
+    await hass.services.async_call("select", "select_option", {"entity_id": "select.arwen_room_placement", "option": "Neutral"}, blocking=True)
+    await hass.services.async_call("media_player", "turn_off", {"entity_id": eid}, blocking=True)
+
+    await wait_for(lambda: arwen.sets(Cmd.TIMER))  # UDP is async; wait for the last command
+    assert arwen.sets(Cmd.VOLUME) == ["30"]
+    assert arwen.sets(Cmd.VOICING_SET) == ["V100"]
+    assert '"play_identity":"3"' in arwen.sets(Cmd.PLAYER_SET)[0]
+    assert arwen.sets(Cmd.PLAY_CONTROL) == ["PAUSE"]
+    assert arwen.sets(Cmd.ROOM_SET) == ["neutral"]
+    assert arwen.sets(Cmd.TIMER) == ["20"]
+    await wait_for(lambda: hass.states.get(eid).state == "off")
+    assert hass.states.get("select.arwen_room_placement").state == "Neutral"
+    assert hass.states.get("sensor.arwen_battery").state == "100"
+
+
+async def test_grouping(hass: HomeAssistant, fakes) -> None:
+    legolas = await fakes("127.0.0.3", serial=LEGOLAS, name="Legolas", player=SPOTIFY_PLAYER)
+    arwen = await fakes("127.0.0.2", serial=ARWEN, name="Arwen")
+    await setup(hass, entry_for("127.0.0.3", "Legolas", LEGOLAS))
+    await setup(hass, entry_for("127.0.0.2", "Arwen", ARWEN))
+    await wait_for(lambda: hass.states.get("media_player.arwen").state == "playing")
+
+    # join from HA: both get 502 with an app-style link id
+    await hass.services.async_call("media_player", "join",
+                                   {"entity_id": "media_player.legolas", "group_members": ["media_player.arwen"]},
+                                   blocking=True)
+    await wait_for(lambda: legolas.sets(Cmd.GROUP_JOIN) and arwen.sets(Cmd.GROUP_JOIN))
+    link = legolas.sets(Cmd.GROUP_JOIN)[0]
+    assert link.startswith(f"LINK Legolas_{LEGOLAS}_")
+    assert arwen.sets(Cmd.GROUP_JOIN) == [link]
+
+    # speakers confirm with notifications; only "GROUPED" first -> master inferred from link id
+    for fake in (legolas, arwen):
+        fake.notify(Cmd.GROUP, f"GROUPED,{link}")
+    await wait_for(lambda: hass.states.get("media_player.arwen").attributes.get("group_members")
+                   == ["media_player.legolas", "media_player.arwen"])
+    # the slave shows the master's media
+    assert hass.states.get("media_player.arwen").attributes["media_title"] == "Sweet Child O' Mine"
+
+    # unjoin a pair -> both leave, FREE clears the group
+    await hass.services.async_call("media_player", "unjoin", {"entity_id": "media_player.arwen"}, blocking=True)
+    await wait_for(lambda: arwen.sets(Cmd.GROUP_LEAVE) and legolas.sets(Cmd.GROUP_LEAVE))
+    assert arwen.sets(Cmd.GROUP_LEAVE) == [link] and legolas.sets(Cmd.GROUP_LEAVE) == [link]
+    for fake in (legolas, arwen):
+        fake.notify(Cmd.GROUP, "FREE")
+    await wait_for(lambda: hass.states.get("media_player.arwen").attributes.get("group_members") is None)
+    assert hass.states.get("media_player.arwen").attributes.get("media_title") is None
+
+
+async def test_config_flow_user_and_zeroconf_host_update(hass: HomeAssistant, fakes) -> None:
+    await fakes("127.0.0.2", serial=ARWEN, name="Arwen")
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"host": "127.0.0.2"})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["title"] == "Arwen"
+    assert result["data"] == {"host": "127.0.0.2", "name": "Arwen", CONF_SERIAL: ARWEN}
+    entry = result["result"]
+    assert entry.unique_id == ARWEN
+    await hass.async_block_till_done()
+
+    # unreachable host -> error
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {"host": "127.0.0.99"})
+    assert result["errors"] == {"base": "cannot_connect"}
+
+    # zeroconf sees the same serial on a new IP (e.g. advertised as "LINK Arwen") -> host updated
+    ip = ip_address("127.0.0.7")
+    info = ZeroconfServiceInfo(
+        ip_address=ip, ip_addresses=[ip], port=7000, hostname="Arwen.local.", type="_airplay._tcp.local.",
+        name="LINK Arwen._airplay._tcp.local.",
+        properties={"manufacturer": "Libratone", "serialNumber": ARWEN, "model": "LTH300"},
+    )
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_ZEROCONF}, data=info)
+    assert result["type"] is FlowResultType.ABORT and result["reason"] == "already_configured"
+    assert entry.data["host"] == "127.0.0.7"
+    await hass.async_block_till_done()
+
+
+async def test_zeroconf_new_speaker(hass: HomeAssistant) -> None:
+    ip = ip_address("127.0.0.8")
+    info = ZeroconfServiceInfo(
+        ip_address=ip, ip_addresses=[ip], port=7000, hostname="Legolas.local.", type="_airplay._tcp.local.",
+        name="Legolas._airplay._tcp.local.",
+        properties={"manufacturer": "Libratone", "serialNumber": LEGOLAS},
+    )
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_ZEROCONF}, data=info)
+    assert result["type"] is FlowResultType.FORM and result["step_id"] == "zeroconf_confirm"
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"] == {"host": "127.0.0.8", "name": "Legolas", CONF_SERIAL: LEGOLAS}
+    await hass.async_block_till_done()

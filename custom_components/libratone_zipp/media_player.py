@@ -1,330 +1,247 @@
-import logging
-import voluptuous as vol
-from datetime import timedelta
+"""Media player entity for Libratone speakers."""
+from __future__ import annotations
 
-# Prefer vendored lib during dev. Fall back to PyPI if not present
-try:
-    from .vendor.python_libratone_zipp.python_libratone_zipp import LibratoneZipp  # type: ignore
-except Exception:  # pragma: no cover
-    from python_libratone_zipp import LibratoneZipp  # type: ignore
+import random
 
-from homeassistant.components.media_player import PLATFORM_SCHEMA, MediaPlayerEntity
-from homeassistant.core import HomeAssistant
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from .const import DOMAIN
-from homeassistant.const import CONF_NAME
-
-
-from homeassistant.components.media_player.const import (
-    MediaType,
+from homeassistant.components.media_player import (
+    MediaPlayerDeviceClass,
+    MediaPlayerEntity,
     MediaPlayerEntityFeature,
+    MediaPlayerState,
+    MediaType,
 )
-from homeassistant.const import (
-    CONF_HOST,
-    CONF_NAME,
-    STATE_IDLE,
-    STATE_OFF,
-    STATE_PLAYING,
-    STATE_PAUSED,
-    STATE_IDLE,
-    STATE_UNKNOWN,
-)
+from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 
-import homeassistant.helpers.config_validation as cv
+from . import LibratoneConfigEntry, entity_unique_id, legacy_unique_id
+from .entity import LibratoneEntity
+from .speaker import LibratoneSpeaker
 
-DEFAULT_NAME = "Libratone Zipp"
-DEVICE_CLASS_SPEAKER = "speaker"
-
-SUPPORT_LIBRATONE_ZIPP = (
+FEATURES = (
     MediaPlayerEntityFeature.PLAY
     | MediaPlayerEntityFeature.PAUSE
     | MediaPlayerEntityFeature.STOP
     | MediaPlayerEntityFeature.NEXT_TRACK
     | MediaPlayerEntityFeature.PREVIOUS_TRACK
-    | MediaPlayerEntityFeature.SELECT_SOUND_MODE
-    | MediaPlayerEntityFeature.SELECT_SOURCE
-    | MediaPlayerEntityFeature.TURN_OFF
-    | MediaPlayerEntityFeature.TURN_ON
     | MediaPlayerEntityFeature.VOLUME_SET
     | MediaPlayerEntityFeature.VOLUME_STEP
+    | MediaPlayerEntityFeature.SELECT_SOUND_MODE
+    | MediaPlayerEntityFeature.SELECT_SOURCE
+    | MediaPlayerEntityFeature.TURN_ON
+    | MediaPlayerEntityFeature.TURN_OFF
+    | MediaPlayerEntityFeature.GROUPING
 )
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {
-        vol.Required(CONF_HOST): cv.string,
-        vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
-    }
-)
+STATE_MAP = {
+    "playing": MediaPlayerState.PLAYING,
+    "paused": MediaPlayerState.PAUSED,
+    "buffering": MediaPlayerState.BUFFERING,
+    "stopped": MediaPlayerState.IDLE,
+}
 
-_LOGGER = logging.getLogger("LibratoneZippDevice")
-
-GROUPS = {}           # link_id -> set(entity)
-ALL_ENTITIES = set()  # all Libratone Zipp media player entities
-# Poll a bit more frequently so UI reflects native group changes quickly.
-SCAN_INTERVAL = timedelta(seconds=5)
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
+    hass: HomeAssistant, entry: LibratoneConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    """Set up from a config entry."""
-    zipp_client = hass.data[DOMAIN][entry.entry_id]
-    name = entry.title or entry.data.get(CONF_NAME) or DEFAULT_NAME
-    async_add_entities([LibratoneZippDevice(zipp_client, name)])
+    async_add_entities([LibratoneMediaPlayer(entry, entry.runtime_data)])
 
-def setup_platform(hass, config, add_entities, discover_info=None):
-    """Set up Libratone Zipp"""
 
-    host = config[CONF_HOST]
-    name = config[CONF_NAME]
-    #_LOGGER.warning(f"setup_platform called for host={host}, name={name}")
+class LibratoneMediaPlayer(LibratoneEntity, MediaPlayerEntity, RestoreEntity):
+    _attr_name = None
+    _attr_device_class = MediaPlayerDeviceClass.SPEAKER
+    _attr_supported_features = FEATURES
+    _attr_media_content_type = MediaType.MUSIC
+    _attr_volume_step = 0.02
 
-    zipp_client = LibratoneZipp(host)
+    def __init__(self, entry: LibratoneConfigEntry, speaker: LibratoneSpeaker) -> None:
+        super().__init__(entry, speaker)
+        self._attr_unique_id = (
+            entity_unique_id(speaker.serial) if speaker.serial else legacy_unique_id(entry.data["host"])
+        )
 
-    # Bootstrap a bit of state so attributes aren't None on first render
-    try:
-        zipp_client.name_get()
-        zipp_client.version_get()
-        zipp_client.volume_get()
-    except Exception:
-        _LOGGER.debug("Initial bootstrap calls failed; will rely on polling.")
+    async def async_added_to_hass(self) -> None:
+        self.speaker.entity_id = self.entity_id
+        # Group state is only pushed on change, so seed it from before the restart.
+        # Any real group notification overrides it.
+        if self.speaker.group_link_id is None and (last := await self.async_get_last_state()):
+            attrs = last.attributes  # libratone_* names are from integration versions <= 4.x
+            self.speaker.group_link_id = attrs.get("group_link_id") or attrs.get("libratone_group_link_id")
+            self.speaker.group_role = attrs.get("group_role") or attrs.get("libratone_group_role")
+        await super().async_added_to_hass()
+        for other in self._hub.speakers:
+            if other is not self.speaker:
+                other.notify()
 
-    # Ensure cleanly stop threads/sockets on HA shutdown
-    from homeassistant.const import EVENT_HOMEASSISTANT_STOP
-    def _on_stop(_):
-        try:
-            zipp_client.exit()
-        except Exception:
-            pass
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _on_stop)
-
-    add_entities([LibratoneZippDevice(zipp_client, name)])
-
-class LibratoneZippDevice(MediaPlayerEntity):
-    """Representation of a Libratone Zipp speaker."""
-
-    def __init__(self, zipp_client, name):
-        """Initialize a new Libratone Zipp device"""
-        self.zipp = zipp_client
-        self._name = name
-
-        self._device_type = DEVICE_CLASS_SPEAKER
-
-        self._state = None
-        self._volume_level = None
-
-        self._sound_mode = None
-        self._sound_mode_list = None
-
-        self._track_name = None
-        self._track_artist = None
-
-        # Grouping (filled from libratone lib's parsed notifications)
-        self._group_status = None
-        self._group_link_id = None
-        self._group_role = None
-
-        ALL_ENTITIES.add(self)
-
-        # self._source = None
-        self._source_list = ["1", "2", "3", "4", "5"]
-
-        self.update()
-
-    def update(self):
-        """Update the state of this media_player."""
-
-        if self.zipp.name != None:
-            self._name = self.zipp.name
-        self._sound_mode_list = self.zipp.voicing_list
-        self._sound_mode = self.zipp.voicing
-
-        self._track_name = self.zipp.play_title
-        self._track_artist = self.zipp.play_subtitle
-
-        # Update of state
-        if self.zipp.state == "SLEEPING":
-            self._state = STATE_OFF
-        elif self.zipp.state == "PLAYING":
-            self._state = STATE_PLAYING
-        elif self.zipp.state == "PAUSED":
-            self._state = STATE_PAUSED
-        elif self.zipp.state == "STOPPED" or self.zipp.state == "ON":
-            self._state = STATE_IDLE
-        else:
-            self._state = STATE_UNKNOWN
-
-        # Update of volume
-        if self.zipp.volume != None:
-            self._volume_level = int(self.zipp.volume) / 100
-
-        # --- NEW: native multiroom reflection ---
-        # The library sets these when it receives UDP 3333 notifications (cmd 103).
-        self._group_status = getattr(self.zipp, "group_status", None)
-        self._group_link_id = getattr(self.zipp, "group_link_id", None)
-        self._group_role = getattr(self.zipp, "group_role", None)
-
-        # 1) remove from all existing groups
-        for members in GROUPS.values():
-            members.discard(self)
-        # 2) add to current group if grouped
-        if self._group_status == "GROUPED" and self._group_link_id:
-            GROUPS.setdefault(self._group_link_id, set()).add(self)
-        # 3) prune empties
-        for lid in list(GROUPS.keys()):
-            if not GROUPS[lid]:
-                GROUPS.pop(lid, None)
+    # ------------------------------------------------------------------ helpers
+    @property
+    def _hub(self):
+        return self.speaker.hub
 
     @property
-    def unique_id(self):
-        """Stable id for registry: one entity per IP/host."""
-        host = getattr(self.zipp, "host", None)
-        if not host:
+    def _media_source(self) -> LibratoneSpeaker:
+        """A group slave reports no media; show (and control) its master instead."""
+        if self.speaker.group_link_id:
+            master = self._hub.group_master(self.speaker)
+            if master is not None:
+                return master
+        return self.speaker
+
+    # ------------------------------------------------------------------ state
+    @property
+    def state(self) -> MediaPlayerState | None:
+        spk = self.speaker
+        if spk.power is None and spk.play_status is None:
             return None
-        # normalize IPv4/IPv6 for registry safety
-        host_tag = str(host).replace(".", "_").replace(":", "_").lower()
-        return f"libratone_{host_tag}"
-
-
-    @property
-    def name(self):
-        """Return the name of the device."""
-        return self._name
+        if spk.is_sleeping:
+            return MediaPlayerState.OFF
+        status = self._media_source.play_status
+        return STATE_MAP.get(status, MediaPlayerState.ON) if status else MediaPlayerState.ON
 
     @property
-    def state(self):
-        """Return the state of the device."""
-        return self._state
+    def volume_level(self) -> float | None:
+        return None if self.speaker.volume is None else self.speaker.volume / 100
 
     @property
-    def volume_level(self):
-        """Volume level of the media player (0..1)."""
-        return self._volume_level
+    def is_volume_muted(self) -> bool | None:
+        return self.speaker.muted
 
     @property
-    def supported_features(self):
-        """Flag media player features that are supported."""
-        return SUPPORT_LIBRATONE_ZIPP | MediaPlayerEntityFeature.GROUPING
+    def media_title(self) -> str | None:
+        return self._media_source.media_title
 
     @property
-    def media_content_type(self):
-        """Content type of current playing media."""
-        return MediaType.MUSIC
-
-    '''
-    @property
-    def source(self):
-        """Name of the current input source."""
-        return None
-    '''
+    def media_artist(self) -> str | None:
+        return self._media_source.media_artist
 
     @property
-    def source_list(self):
-        """List of available input sources."""
-        return self._source_list
+    def media_album_name(self) -> str | None:
+        return self._media_source.media_album
 
     @property
-    def sound_mode(self):
-        """Return the current sound mode."""
-        return self._sound_mode
+    def media_playlist(self) -> str | None:
+        return self._media_source.media_playlist
 
     @property
-    def sound_mode_list(self):
-        """Return the current sound mode."""
-        return self._sound_mode_list
+    def media_image_url(self) -> str | None:
+        return self._media_source.media_image_url
 
     @property
-    def media_title(self):
-        """Title of current playing media."""
-        return self._track_name
+    def media_content_id(self) -> str | None:
+        return self._media_source.media_content_id
 
     @property
-    def media_artist(self):
-        """Artist of current playing media, music track only."""
-        return self._track_artist
+    def source(self) -> str | None:
+        return self._media_source.source
+
     @property
-    def extra_state_attributes(self):
-        # Handy to see in Dev Tools → States while testing
+    def source_list(self) -> list[str] | None:
+        return self.speaker.favorite_names or None
+
+    @property
+    def sound_mode(self) -> str | None:
+        return self.speaker.voicing
+
+    @property
+    def sound_mode_list(self) -> list[str] | None:
+        return self.speaker.voicing_names or None
+
+    @property
+    def group_members(self) -> list[str] | None:
+        members = self._hub.group_members(self.speaker)
+        ids = [m.entity_id for m in members if m.entity_id]
+        return ids if len(ids) > 1 else None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        spk = self.speaker
         return {
-            "libratone_group_status": self._group_status,
-            "libratone_group_link_id": self._group_link_id,
-            "libratone_group_role": self._group_role,
+            "host": spk.host,
+            "serial_number": spk.serial,
+            "room_placement": spk.room,
+            "battery_level": spk.battery,
+            "signal_strength": spk.signal,
+            "sleep_timer": spk.timer,
+            "group_role": spk.group_role,
+            "group_link_id": spk.group_link_id,
         }
 
-    @property
-    def group_members(self):
-        if self._group_status == "GROUPED" and self._group_link_id in GROUPS:
-            return [e.entity_id for e in GROUPS[self._group_link_id] if e is not self]
-        return None
+    # ------------------------------------------------------------------ commands
+    def _require_available(self) -> None:
+        if not self.speaker.available:
+            raise HomeAssistantError(f"{self.speaker.display_name} is not reachable")
 
-    def turn_on(self):
-        """Turn the media player on."""
-        return self.zipp.wakeup()
+    async def async_turn_on(self) -> None:
+        self._require_available()
+        self.speaker.wake()
 
-    def turn_off(self):
-        """Turn the media player off."""
-        return self.zipp.sleep()
+    async def async_turn_off(self) -> None:
+        self._require_available()
+        self.speaker.sleep()
 
-    def set_volume_level(self, volume):
-        """Set volume level, range 0..1."""
-        # In order to get a smooth volume slider, volume is overriden here - but it will be updated later anyway
-        self._volume_level = volume
-        return self.zipp.volume_set(int(volume * 100))
+    async def async_set_volume_level(self, volume: float) -> None:
+        self._require_available()
+        self.speaker.set_volume(round(volume * 100))
+        self.async_write_ha_state()
 
-    def media_play(self):
-        """Send play command."""
-        return self.zipp.play()
+    async def _play_control(self, action: str) -> None:
+        self._require_available()
+        self._media_source.play_control(action)
 
-    def media_pause(self):
-        """Send pause command."""
-        return self.zipp.pause()
+    async def async_media_play(self) -> None:
+        await self._play_control("play")
 
-    def media_stop(self):
-        """Send stop command."""
-        return self.zipp.stop()
+    async def async_media_pause(self) -> None:
+        await self._play_control("pause")
 
-    def media_next_track(self):
-        """Send next command."""
-        return self.zipp.next()
+    async def async_media_stop(self) -> None:
+        await self._play_control("stop")
 
-    def media_previous_track(self):
-        """Send prev command."""
-        return self.zipp.prev()
+    async def async_media_next_track(self) -> None:
+        await self._play_control("next")
 
-    def select_source(self, source):
-        """Select input source."""
-        return self.zipp.favorite_play(source)
+    async def async_media_previous_track(self) -> None:
+        await self._play_control("prev")
 
-    def select_sound_mode(self, sound_mode):
-        """ "Select sound mode."""
-        return self.zipp.voicing_set(sound_mode)
+    async def async_select_source(self, source: str) -> None:
+        self._require_available()
+        if not self._media_source.play_favorite(source):
+            raise ServiceValidationError(f"Unknown favorite: {source}")
 
-    async def async_join_players(self, group_members: list[str]):
-        # Use this entity's current link_id as the coordinator’s group id.
-        link_id = self._group_link_id
+    async def async_select_sound_mode(self, sound_mode: str) -> None:
+        self._require_available()
+        if not self.speaker.set_voicing(sound_mode):
+            raise ServiceValidationError(f"Unknown sound mode: {sound_mode}")
+
+    # ------------------------------------------------------------------ grouping
+    def _speaker_for(self, entity_id: str) -> LibratoneSpeaker:
+        spk = next((s for s in self._hub.speakers if s.entity_id == entity_id), None)
+        if spk is None:
+            raise ServiceValidationError(f"{entity_id} is not a Libratone speaker")
+        return spk
+
+    async def async_join_players(self, group_members: list[str]) -> None:
+        """Make this speaker the master and link the others to it (like the app does)."""
+        self._require_available()
+        master = self.speaker
+        members = [self._speaker_for(e) for e in group_members if e != self.entity_id]
+        link_id = master.group_link_id if master.group_role == "MASTER" else None
         if not link_id:
-            # If coordinator isn’t grouped yet, make/choose a link_id
-            link_id = getattr(self.zipp, "group_link_id", None)
-            if not link_id:
-                link_id = f"{self.name}_{hash(self.unique_id) & 0xffffffff}"
+            # Same shape the app uses: <MasterName>_<MasterSerial>_<random>
+            link_id = f"{master.name or master.display_name}_{master.serial or 'x'}_{random.randint(10**9, 2**31 - 1)}"
+            master.group_join(link_id)
+        for member in members:
+            member.group_join(link_id)
 
-        # ensure the target (self) is in the group
-        if self._group_status != "GROUPED" or self._group_link_id != link_id:
-            await self.hass.async_add_executor_job(self.zipp.group_join, link_id)
-
-        # Ask each selected member to LINK to this link_id (join)
-        for ent_id in group_members:
-            ent = next((e for e in ALL_ENTITIES if e.entity_id == ent_id), None)
-            if not ent:
-                continue
-            await self.hass.async_add_executor_job(ent.zipp.group_join, link_id)
-
-        # Let polling/notifications refresh group_members
-        self.async_write_ha_state()
-
-    async def async_unjoin_player(self):
-        lid = self._group_link_id
-        await self.hass.async_add_executor_job(self.zipp.group_leave, lid)
-        self.async_write_ha_state()
+    async def async_unjoin_player(self) -> None:
+        spk = self.speaker
+        if not spk.group_link_id:
+            return
+        members = self._hub.group_members(spk)
+        # A link needs two speakers: leaving a pair (or the master leaving) dissolves it
+        targets = members if len(members) <= 2 or spk.group_role == "MASTER" else [spk]
+        if spk not in targets:
+            targets.append(spk)
+        for member in targets:
+            member.group_leave(spk.group_link_id)

@@ -1,13 +1,15 @@
 # Libratone Zipp controller for Home Assistant
 
-This aims to control a Libratone Zipp speaker within [Home Assistant](https://www.home-assistant.io/) using [this Python library](https://github.com/Chouffy/python_libratone_zipp).
+This controls Libratone Zipp speakers from [Home Assistant](https://www.home-assistant.io/).
+
+Since v5 the protocol code lives inside the integration (`custom_components/libratone_zipp/{protocol,speaker,hub}.py`, asyncio, no external dependency).
+Speakers are identified by **serial number**, not IP: when a speaker comes back from sleep/power-off with a new DHCP address, the integration finds it again by itself (zeroconf, plus a small UDP sweep of the subnet while a speaker is missing).
 
 ## Limitations / Known bugs
 
-* Major:
-    * On Bluetooth and when the music is playing, you only get "Play" button, not Pause.
-* Minor:
-    * After a restart of Home Assistant, the integration can be in an "unknown" state before the 1st music is played
+* Group (SoundSpace Link) state is only pushed by the speakers when it changes. After a Home Assistant restart the last known group is restored, but a change made while HA was down is only seen at the next group change.
+* Mute can be read but not set (command unknown).
+* Playing arbitrary media (`play_media`) is not supported; the five favorites are available as sources.
 
 ## Usage
 
@@ -48,6 +50,13 @@ Current coverage suits me, even if the python integration has much more options.
     * [x] Add/Remove speakers via Web interface (no `configuration.yaml` anymore!)
 * v4.1 
     * [x] Implement SoundSpace Link
+* v5.0
+    * [x] Async, built-in protocol code (no PyPI dependency)
+    * [x] Speakers tracked by serial number; automatic recovery after IP changes, proper `unavailable` state
+    * [x] Push updates instead of 5 s polling
+    * [x] Artist, album, playlist, cover art, current source (Spotify, favorite name, ...)
+    * [x] Favorites by name, room placement select, battery sensor, device entries
+    * [x] Group members master-first, slave mirrors the master's media, app-compatible link ids
 
 
 Other functionalities - Not planned right now:
@@ -76,6 +85,15 @@ Other functionalities - Not planned right now:
 * Multi-room
     * [ ] Set speaker mode (stereo, left, right)
     * [ ] Add better media player cards
+
+## Development
+
+Tests run against fake speakers on loopback addresses (no hardware needed):
+
+```sh
+pip install pytest-homeassistant-custom-component
+pytest
+```
 
 ## Acknowledgment
 

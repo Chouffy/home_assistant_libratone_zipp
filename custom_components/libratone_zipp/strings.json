@@ -1,0 +1,34 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Add Libratone Zipp speaker",
+        "description": "Enter the IP address of your speaker. It only needs to be right once: the speaker is tracked by serial number afterwards, even if its IP changes.",
+        "data": {
+          "host": "Host / IP",
+          "name": "Name (optional)"
+        }
+      },
+      "zeroconf_confirm": {
+        "title": "Libratone speaker found",
+        "description": "Add {name} ({host})?"
+      }
+    },
+    "error": {
+      "cannot_connect": "The speaker did not answer. Check the IP, and that UDP ports 3333 and 7778 reach Home Assistant."
+    },
+    "abort": {
+      "already_configured": "This speaker is already configured.",
+      "not_libratone": "Not a Libratone speaker.",
+      "cannot_connect": "The speaker did not answer."
+    }
+  },
+  "entity": {
+    "select": {
+      "room_placement": {
+        "name": "Room placement"
+      }
+    }
+  }
+}

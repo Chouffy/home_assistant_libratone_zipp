@@ -95,7 +95,7 @@ class LibratoneMediaPlayer(LibratoneEntity, MediaPlayerEntity, RestoreEntity):
             return None
         if spk.is_sleeping:
             return MediaPlayerState.OFF
-        status = self._media_source.play_status
+        status = self._media_source.effective_status
         return STATE_MAP.get(status, MediaPlayerState.ON) if status else MediaPlayerState.ON
 
     @property

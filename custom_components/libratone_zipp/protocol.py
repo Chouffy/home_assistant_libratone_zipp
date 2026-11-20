@@ -47,7 +47,8 @@ class Cmd(IntEnum):
     """Known command ids (names from com.libratone.model.LSSDPNode where known)."""
 
     VERSION = 5
-    SOURCE_STATE = 10       # 7 opaque bytes, sent by the app on every refresh; meaning TBD
+    SOURCE_STATE = 10       # 7 bytes: [0] mode (MODE_*), [2] 0x08 = Bluetooth playing; rest unknown
+    SOURCE_MODE = 50        # notification carrying byte 0 of SOURCE_STATE (GET returns nothing)
     POWER_MODE = 14         # '0' awake, '1' transitional, '2' sleeping
     TIMER = 15              # sleep timer; also used for sleep ("20") / wake ("00")
     PLAY_CONTROL = 40       # PLAY / PAUSE / STOP / NEXT / PREV
@@ -92,6 +93,7 @@ POWER_SLEEP = "2"
 
 # Commands polled frequently (cheap, change often)
 POLL_FAST: tuple[Cmd, ...] = (
+    Cmd.SOURCE_STATE,
     Cmd.POWER_MODE,
     Cmd.PLAY_STATUS,
     Cmd.VOLUME,
@@ -194,6 +196,22 @@ def parse_lssdp(packet: bytes) -> dict[str, str] | None:
         if sep:
             fields[key.strip()] = value.strip()
     return fields if "DeviceState" in fields else None
+
+
+# SOURCE_STATE byte 0 (see libratone-sniffing/weekend/findings/2026-11-20_sources)
+MODE_STREAM = 0x34      # network streaming, details in PLAYER play_type (e.g. spotify)
+MODE_RADIO = 0x3F       # radio favorite (PLAYER isFromChannel / play_identity = favorite number)
+MODE_LOCAL = 0x41       # Bluetooth or idle
+MODE_SLAVE = 0x3B       # group slave
+BT_PLAYING = 0x08       # SOURCE_STATE byte 2 while Bluetooth audio plays
+
+
+def playing_from_lssdp(fields: dict[str, str]) -> bool | None:
+    """DeviceState 3rd letter: P = playing, N = not. Right even for Bluetooth, where cmd 51 says paused."""
+    parts = fields.get("DeviceState", "").split(",")
+    if len(parts) < 3:
+        return None
+    return {"P": True, "N": False}.get(parts[2].strip().upper())
 
 
 CHANNELS = {"0": "stereo", "1": "left", "2": "right"}           # cmd 512 values

@@ -284,3 +284,30 @@ async def test_master_inferred_from_app_link_id_with_color(hass: HomeAssistant, 
     await wait_for(lambda: any(t.startswith("LINK Legolas_") for t in arwen.sets(Cmd.GROUP_JOIN)))
     new = [t for t in arwen.sets(Cmd.GROUP_JOIN) if t.startswith("LINK Legolas_")][0]
     assert new.startswith(f"LINK Legolas_{LEGOLAS}-2002_")
+
+
+async def test_bluetooth_playback_shows_as_playing(hass: HomeAssistant, fakes) -> None:
+    """Real values from Legolas: Bluetooth playing -> cmd 51 says paused, cmd 10 byte 2 = 08, LSSDP P."""
+    legolas = await fakes("127.0.0.3", serial=LEGOLAS, name="Legolas")
+    legolas.values[Cmd.PLAY_STATUS] = "2"
+    legolas.values[Cmd.SOURCE_STATE] = bytes.fromhex("410c0833000000")
+    await setup(hass, entry_for("127.0.0.3", "Legolas", LEGOLAS))
+    eid = "media_player.legolas"
+    await wait_for(lambda: hass.states.get(eid).state == "playing")
+    assert hass.states.get(eid).attributes["source"] == "Bluetooth"
+
+    legolas.values[Cmd.SOURCE_STATE] = bytes.fromhex("410c0333000000")   # paused on the phone
+    await wait_for(lambda: hass.states.get(eid).state == "paused")
+    assert hass.states.get(eid).attributes.get("source") is None
+
+
+async def test_radio_favorite_source(hass: HomeAssistant, fakes) -> None:
+    legolas = await fakes("127.0.0.3", serial=LEGOLAS, name="Legolas", player={
+        "isFromChannel": True, "play_identity": "3", "play_title": "Radio Paradise",
+        "play_subtitle": "", "play_token": "", "play_type": "channel"})
+    legolas.values[Cmd.SOURCE_STATE] = bytes.fromhex("3f100045030000")
+    await setup(hass, entry_for("127.0.0.3", "Legolas", LEGOLAS))
+    eid = "media_player.legolas"
+    await wait_for(lambda: hass.states.get(eid).state == "playing")
+    assert hass.states.get(eid).attributes["source"] == "3: Radio Paradise"
+    assert hass.states.get(eid).attributes["media_title"] == "Radio Paradise"

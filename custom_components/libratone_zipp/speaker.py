@@ -75,6 +75,8 @@ class LibratoneSpeaker:
         self.group_role: str | None = None
         self.group_link_id: str | None = None
         self.channel: str | None = None      # stereo / left / right
+        self.source_state: bytes = b""       # cmd 10, see protocol.MODE_*
+        self.lssdp_playing: bool | None = None
         self.color: str | None = None        # e.g. 2002; part of the app's link ids
 
         self._listeners: list[Callable[[], None]] = []
@@ -102,6 +104,19 @@ class LibratoneSpeaker:
     @property
     def display_name(self) -> str:
         return self.name or self.expected_name or f"Libratone {self.host}"
+
+    @property
+    def bluetooth_playing(self) -> bool:
+        return len(self.source_state) > 2 and self.source_state[2] == p.BT_PLAYING
+
+    @property
+    def effective_status(self) -> str | None:
+        """play_status, corrected: cmd 51 reports Bluetooth playback as paused, LSSDP and cmd 10 know better."""
+        if self.play_status == "playing":
+            return "playing"
+        if self.bluetooth_playing or self.lssdp_playing:
+            return "playing"
+        return self.play_status
 
     @property
     def is_sleeping(self) -> bool:
@@ -177,6 +192,8 @@ class LibratoneSpeaker:
     @property
     def source(self) -> str | None:
         """Current favorite name if a favorite is playing, otherwise the source type."""
+        if self.bluetooth_playing:
+            return "Bluetooth"
         pl = self.player
         ident = str(pl.get("play_identity") or "")
         for ch in self.channels:
@@ -199,7 +216,18 @@ class LibratoneSpeaker:
             if cmd == Cmd.POWER_MODE:
                 return self._set("power", text[:1])
             if cmd == Cmd.PLAY_STATUS:
-                return self._set("play_status", p.PLAY_STATUS.get(text[:1], self.play_status))
+                changed = self._set("play_status", p.PLAY_STATUS.get(text[:1], self.play_status))
+                if changed:
+                    self._recheck_lssdp()   # its playing flag would otherwise lag up to a poll interval
+                return changed
+            if cmd == Cmd.SOURCE_STATE:
+                changed = self._set("source_state", bytes(frame.data))
+                if changed:
+                    self._recheck_lssdp()
+                return changed
+            if cmd == Cmd.SOURCE_MODE:
+                self.request(Cmd.SOURCE_STATE, Cmd.PLAYER)   # mode switched: fetch the details now
+                return False
             if cmd == Cmd.VOLUME:
                 return self._set("volume", p.parse_int(text))
             if cmd == Cmd.PLAYER:
@@ -272,7 +300,12 @@ class LibratoneSpeaker:
         group_changed = self.apply_group(p.group_from_lssdp(fields))
         channel = p.channel_from_lssdp(fields)
         other_changed = channel is not None and self._set("channel", channel)
+        other_changed |= self._set("lssdp_playing", p.playing_from_lssdp(fields))
         return group_changed, other_changed
+
+    def _recheck_lssdp(self) -> None:
+        if self.host:
+            self.hub.send(self.host, p.LSSDP_MSEARCH, port=p.PORT_LSSDP)
 
     def set_channel(self, channel: str) -> bool:
         """stereo / left / right"""

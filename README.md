@@ -7,9 +7,12 @@ Speakers are identified by **serial number**, not IP: when a speaker comes back 
 
 ## Limitations / Known bugs
 
-* Group (SoundSpace Link) state is only pushed by the speakers when it changes. After a Home Assistant restart the last known group is restored, but a change made while HA was down is only seen at the next group change.
+* Sources can't be switched from Home Assistant except the five favorites (the app can't either: Spotify is
+  controlled via Spotify Connect, Bluetooth from the phone). They are detected though: Spotify, Bluetooth, favorites.
+* Bluetooth: playback is detected (shown as playing, source "Bluetooth"), whether a phone is *connected* is not.
+  Bluetooth has its own volume, which the speaker doesn't report.
 * Mute can be read but not set (command unknown).
-* Playing arbitrary media (`play_media`) is not supported; the five favorites are available as sources.
+* Playing arbitrary media (`play_media`) is not supported.
 
 ## Usage
 
@@ -57,6 +60,9 @@ Current coverage suits me, even if the python integration has much more options.
     * [x] Artist, album, playlist, cover art, current source (Spotify, favorite name, ...)
     * [x] Favorites by name, room placement select, battery sensor, device entries
     * [x] Group members master-first, slave mirrors the master's media, app-compatible link ids
+    * [x] Group state polled from the speakers' LSSDP status (UDP 1800): correct right after an HA restart
+    * [x] Audio channel select (stereo / left / right)
+    * [x] Source detection incl. Bluetooth; Bluetooth playback shows as playing (was: only "Play" button)
 
 
 Other functionalities - Not planned right now:

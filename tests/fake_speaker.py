@@ -57,6 +57,7 @@ class FakeSpeaker:
             Cmd.PLAYER: json.dumps(player or EMPTY_PLAYER), Cmd.VOICING_LIST: json.dumps(VOICINGS),
             Cmd.ROOM_LIST: json.dumps(ROOMS), Cmd.CHANNELS: json.dumps(CHANNELS), Cmd.BATTERY: "100",
             Cmd.CHARGING: "2", Cmd.SIGNAL: "-89,-34,5/5", Cmd.MUTE: "UNMUTE", Cmd.COLOR: "2002",
+            Cmd.SOURCE_STATE: bytes.fromhex("340c00f3040000"),   # real values: see findings/2026-11-20_sources
         }
         self.received: list[p.Frame] = []
         self.ip: str | None = None
@@ -87,6 +88,11 @@ class FakeSpeaker:
                 t.close()
         self._transport = self._lssdp = None
 
+    def _playing_letter(self) -> str:
+        """Like the real speakers: P while audio plays, including Bluetooth (where cmd 51 says paused)."""
+        src = self.values[Cmd.SOURCE_STATE]
+        return "P" if self.values[Cmd.PLAY_STATUS] == "0" or (len(src) > 2 and src[2] == 0x08) else "N"
+
     def set_group(self, state: str, link_id: str = "") -> None:
         """What LSSDP reports: state F/M/S, link id without the 'LINK ' prefix."""
         self.lssdp_state = state
@@ -99,7 +105,7 @@ class FakeSpeaker:
         reply = (
             "HTTP/1.1 200 OK\r\nHOST: 239.255.255.250:1800\r\nPROTOCOL: Version 1.0\r\n"
             f"DeviceName: {self.name}_{self.serial}\r\nDeviceID: c467b5000000\r\n"
-            f"DeviceState: {self.lssdp_state},{self.channel},N\r\nPORT: 7777\r\nZoneID: {self.zone}\r\n"
+            f"DeviceState: {self.lssdp_state},{self.channel},{self._playing_letter()}\r\nPORT: 7777\r\nZoneID: {self.zone}\r\n"
             f"Creator: \r\nIPAddr: {self.ip}\r\nStereoPairID: \r\n"
         )
         # like the real speakers: reply goes to the searcher's port 7778, from another socket

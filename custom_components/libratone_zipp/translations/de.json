@@ -37,6 +37,11 @@
           "right": "Rechts"
         }
       }
+    },
+    "number": {
+      "sleep_timer": {
+        "name": "Schlaf-Timer"
+      }
     }
   }
 }

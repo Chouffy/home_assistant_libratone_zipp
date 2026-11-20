@@ -65,31 +65,32 @@ Current coverage suits me, even if the python integration has much more options.
     * [x] Source detection incl. Bluetooth; Bluetooth playback shows as playing (was: only "Play" button)
 
 
-Other functionalities - Not planned right now:
+Roadmap (status after v5, 2026-11-20):
 
 * Module
-    * [ ] Make the module async
+    * [x] Make the module async
     * [ ] Submit it for official integration!
-    * [ ] Add support for other libratone speakers
+    * [ ] Add support for other libratone speakers (only Zipp LTH300, firmware 879 tested)
 * Current Playback info
-    * [ ] Retrieve current playback source
-    * [ ] Retrieve media type: bluetooth, spotify, aux, radio, ...
+    * [x] Retrieve current playback source
+    * [x] Retrieve media type: bluetooth, spotify, radio (aux untested)
 * Standby
-    * [ ] Set a standby timer
-    * [ ] Retrieve a standby timer
+    * [x] Set a standby (sleep) timer: `number.<speaker>_sleep_timer`, minutes, 0 = off
+    * [x] Retrieve a standby timer (shows the remaining time, counts down)
+    * [ ] Auto-standby time (cmd 528 reads `300`; setting it is unknown)
 * Voicing & Room Setting
-    * [ ] Set Room Setting
-    * [ ] Retrieve current Room Setting
+    * [x] Set Room Setting (`select.<speaker>_room_placement`)
+    * [x] Retrieve current Room Setting
 * Favorites
-    * [ ] Play a favorite (proper title)
-    * [ ] Set a Favorite
+    * [x] Play a favorite (proper title, from the speaker's favorite list)
+    * [ ] Set a Favorite (command unknown; needs a capture of "save favorite" in the app)
 * Extended current playback info
-    * [ ] Set extended playback status: shuffle, repeat
-    * [ ] Retrieve extended playback status: shuffle, repeat
-    * [ ] Set Source
-    * [ ] Retrieve current source
+    * [ ] Set / retrieve shuffle, repeat (not exposed by the speaker; Spotify controls it)
+    * [ ] Set Source (not possible; the app can't either, except the favorites)
+    * [x] Retrieve current source
 * Multi-room
-    * [ ] Set speaker mode (stereo, left, right)
+    * [x] Set speaker mode (stereo, left, right): `select.<speaker>_audio_channel`
+    * [x] Group state that survives restarts (LSSDP)
     * [ ] Add better media player cards
 
 ## Development

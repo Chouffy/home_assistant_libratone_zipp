@@ -50,7 +50,8 @@ class Cmd(IntEnum):
     SOURCE_STATE = 10       # 7 bytes: [0] mode (MODE_*), [2] 0x08 = Bluetooth playing; rest unknown
     SOURCE_MODE = 50        # notification carrying byte 0 of SOURCE_STATE (GET returns nothing)
     POWER_MODE = 14         # '0' awake, '1' transitional, '2' sleeping
-    TIMER = 15              # sleep timer; also used for sleep ("20") / wake ("00")
+    TIMER = 15              # sleep timer: SET "2<seconds>" / "F0" cancel / "20" sleep now / "00" wake;
+                            # GET -> '2' + remaining seconds (uint16 LE) or ff ff ff ff ff
     PLAY_CONTROL = 40       # PLAY / PAUSE / STOP / NEXT / PREV
     PLAY_STATUS = 51        # '0' playing, '1' stopped, '2' paused, '3'..'5' transitional
     VOLUME = 64             # 0..100 as ASCII
@@ -99,6 +100,7 @@ POLL_FAST: tuple[Cmd, ...] = (
     Cmd.VOLUME,
     Cmd.PLAYER,
     Cmd.VOICING,
+    Cmd.TIMER,              # remaining sleep timer, counts down
 )
 
 # Commands polled rarely (identity, lists, slow-changing values)
@@ -114,7 +116,6 @@ POLL_SLOW: tuple[Cmd, ...] = (
     Cmd.CHARGING,
     Cmd.SIGNAL,
     Cmd.MUTE,
-    Cmd.TIMER,
     Cmd.COLOR,
 )
 

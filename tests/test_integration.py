@@ -311,3 +311,25 @@ async def test_radio_favorite_source(hass: HomeAssistant, fakes) -> None:
     await wait_for(lambda: hass.states.get(eid).state == "playing")
     assert hass.states.get(eid).attributes["source"] == "3: Radio Paradise"
     assert hass.states.get(eid).attributes["media_title"] == "Radio Paradise"
+
+
+def _timer(seconds: int) -> bytes:
+    return b"2" + seconds.to_bytes(2, "little") + b"\x00\x00"
+
+
+async def test_sleep_timer(hass: HomeAssistant, fakes) -> None:
+    arwen = await fakes("127.0.0.2", serial=ARWEN, name="Arwen")
+    await setup(hass, entry_for("127.0.0.2", "Arwen", ARWEN))
+    eid = "number.arwen_sleep_timer"
+    await wait_for(lambda: hass.states.get(eid).state == "0")
+    await hass.services.async_call("number", "set_value", {"entity_id": eid, "value": 10}, blocking=True)
+    await wait_for(lambda: arwen.sets(Cmd.TIMER)[-1:] == ["2600"])
+    await wait_for(lambda: hass.states.get(eid).state == "10")
+    arwen.values[Cmd.TIMER] = _timer(594)                    # counting down: rounds up to 10 min
+    await wait_for(lambda: hass.states.get(eid).state == "10")
+    arwen.values[Cmd.TIMER] = _timer(539)
+    await wait_for(lambda: hass.states.get(eid).state == "9")
+    await hass.services.async_call("number", "set_value", {"entity_id": eid, "value": 0}, blocking=True)
+    await wait_for(lambda: arwen.sets(Cmd.TIMER)[-1:] == ["F0"])
+    await wait_for(lambda: hass.states.get(eid).state == "0")
+    assert hass.states.get("media_player.arwen").state == "playing"    # never put to sleep

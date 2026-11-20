@@ -388,11 +388,17 @@ class LibratoneSpeaker:
         self._after_command(Cmd.TIMER)
 
     def set_sleep_timer(self, seconds: int) -> None:
-        self._send(Cmd.TIMER, f"2{int(seconds)}")
+        """Speaker goes to standby after `seconds` (verified: GET 15 then counts down)."""
+        seconds = max(1, min(0xFFFF, int(seconds)))   # 0 would mean "sleep now"
+        self._send(Cmd.TIMER, f"2{seconds}")
+        if self._set("timer", seconds):
+            self.notify()
         self._after_command(Cmd.TIMER)
 
     def cancel_sleep_timer(self) -> None:
         self._send(Cmd.TIMER, "F0")
+        if self._set("timer", None):
+            self.notify()
         self._after_command(Cmd.TIMER)
 
     def group_join(self, link_id: str) -> None:

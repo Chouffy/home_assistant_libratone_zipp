@@ -57,7 +57,8 @@ class FakeSpeaker:
             Cmd.PLAYER: json.dumps(player or EMPTY_PLAYER), Cmd.VOICING_LIST: json.dumps(VOICINGS),
             Cmd.ROOM_LIST: json.dumps(ROOMS), Cmd.CHANNELS: json.dumps(CHANNELS), Cmd.BATTERY: "100",
             Cmd.CHARGING: "2", Cmd.SIGNAL: "-89,-34,5/5", Cmd.MUTE: "UNMUTE", Cmd.COLOR: "2002",
-            Cmd.SOURCE_STATE: bytes.fromhex("340c00f3040000"),   # real values: see findings/2026-11-20_sources
+            Cmd.SOURCE_STATE: bytes.fromhex("340c00f3040000"),
+            Cmd.TIMER: b"\xff" * 5,   # real values: see findings/2026-11-20_sources
         }
         self.received: list[p.Frame] = []
         self.ip: str | None = None
@@ -133,6 +134,11 @@ class FakeSpeaker:
                 self.values[Cmd.POWER_MODE] = "2"
             elif frame.cmd == Cmd.TIMER and frame.text == "00":
                 self.values[Cmd.POWER_MODE] = "0"
+            elif frame.cmd == Cmd.TIMER and frame.text == "F0":
+                self.values[Cmd.TIMER] = b"\xff" * 5
+            elif frame.cmd == Cmd.TIMER and frame.text.startswith("2"):
+                # real format (verified on Arwen): '2' + remaining seconds uint16 little-endian + 2 zero bytes
+                self.values[Cmd.TIMER] = b"2" + int(frame.text[1:]).to_bytes(2, "little") + b"\x00\x00"
             elif frame.cmd == Cmd.CHANNEL:
                 self.channel = {"0": "S", "1": "L", "2": "R"}[frame.text]
                 self._send(frame.cmd, "", p.PORT_RESULT)

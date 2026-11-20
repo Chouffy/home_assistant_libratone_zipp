@@ -28,6 +28,14 @@
     "select": {
       "room_placement": {
         "name": "Room placement"
+      },
+      "channel": {
+        "name": "Audio channel",
+        "state": {
+          "stereo": "Stereo (both)",
+          "left": "Left",
+          "right": "Right"
+        }
       }
     }
   }

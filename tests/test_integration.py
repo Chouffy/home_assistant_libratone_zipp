@@ -138,7 +138,7 @@ async def test_grouping(hass: HomeAssistant, fakes) -> None:
                                    blocking=True)
     await wait_for(lambda: legolas.sets(Cmd.GROUP_JOIN) and arwen.sets(Cmd.GROUP_JOIN))
     link = legolas.sets(Cmd.GROUP_JOIN)[0]
-    assert link.startswith(f"LINK Legolas_{LEGOLAS}_")
+    assert link.startswith(f"LINK Legolas_{LEGOLAS}-2002_")  # app format incl. color
     assert arwen.sets(Cmd.GROUP_JOIN) == [link]
 
     # speakers confirm with notifications; only "GROUPED" first -> master inferred from link id
@@ -247,3 +247,40 @@ async def test_lssdp_is_not_a_sign_of_life(hass: HomeAssistant, fakes) -> None:
     arwen._transport.close()            # control service dies, LSSDP keeps answering
     arwen._transport = None
     await wait_for(lambda: hass.states.get("media_player.arwen").state == "unavailable")
+
+
+async def test_stereo_channel(hass: HomeAssistant, fakes) -> None:
+    legolas = await fakes("127.0.0.3", serial=LEGOLAS, name="Legolas")
+    await setup(hass, entry_for("127.0.0.3", "Legolas", LEGOLAS))
+    eid = "select.legolas_audio_channel"
+    await wait_for(lambda: hass.states.get(eid).state == "stereo")   # read via LSSDP (GET 512 is empty)
+    for option, code in (("left", "1"), ("right", "2"), ("stereo", "0")):
+        await hass.services.async_call("select", "select_option", {"entity_id": eid, "option": option}, blocking=True)
+        await wait_for(lambda: legolas.sets(Cmd.CHANNEL)[-1:] == [code])
+        await wait_for(lambda: hass.states.get(eid).state == option)
+    # changed in the app while HA is running: LSSDP poll picks it up
+    legolas.channel = "R"
+    await wait_for(lambda: hass.states.get(eid).state == "right")
+
+
+async def test_master_inferred_from_app_link_id_with_color(hass: HomeAssistant, fakes) -> None:
+    """The app's link ids carry the color: <Name>_<Serial>-<Color>_<rand>."""
+    legolas = await fakes("127.0.0.3", serial=LEGOLAS, name="Legolas")
+    arwen = await fakes("127.0.0.2", serial=ARWEN, name="Arwen", player=SPOTIFY_PLAYER)
+    link_id = f"Arwen_{ARWEN}-2002_1244746321"
+    legolas.set_group("G", link_id)
+    arwen.set_group("G", link_id)
+    await setup(hass, entry_for("127.0.0.3", "Legolas", LEGOLAS))
+    await setup(hass, entry_for("127.0.0.2", "Arwen", ARWEN))
+    await wait_for(lambda: hass.states.get("media_player.legolas").attributes.get("group_members")
+                   == ["media_player.arwen", "media_player.legolas"])
+    assert hass.states.get("media_player.legolas").attributes["media_title"] == "Sweet Child O' Mine"
+
+    # and HA's own joins now use the same shape
+    await hass.services.async_call("media_player", "unjoin", {"entity_id": "media_player.legolas"}, blocking=True)
+    await hass.services.async_call("media_player", "join",
+                                   {"entity_id": "media_player.legolas", "group_members": ["media_player.arwen"]},
+                                   blocking=True)
+    await wait_for(lambda: any(t.startswith("LINK Legolas_") for t in arwen.sets(Cmd.GROUP_JOIN)))
+    new = [t for t in arwen.sets(Cmd.GROUP_JOIN) if t.startswith("LINK Legolas_")][0]
+    assert new.startswith(f"LINK Legolas_{LEGOLAS}-2002_")

@@ -61,6 +61,8 @@ class Cmd(IntEnum):
     PLAYER_SET = 277        # JSON, used to start a favorite
     PLAYER = 278            # JSON with title/artist/album/cover/source
     GROUP_JOIN = 502        # "LINK <link_id>"
+    CHANNEL = 512           # SET '0' stereo / '1' left / '2' right; notification echoes it; GET returns empty
+                            # (read it from LSSDP DeviceState instead, 2nd letter S/L/R)
     GROUP_LEAVE = 503       # "LINK <link_id>"
     VOICING = 516           # current voicing id, e.g. V103
     ROOM = 517              # current room placement id, e.g. shelf
@@ -111,6 +113,7 @@ POLL_SLOW: tuple[Cmd, ...] = (
     Cmd.SIGNAL,
     Cmd.MUTE,
     Cmd.TIMER,
+    Cmd.COLOR,
 )
 
 
@@ -191,6 +194,17 @@ def parse_lssdp(packet: bytes) -> dict[str, str] | None:
         if sep:
             fields[key.strip()] = value.strip()
     return fields if "DeviceState" in fields else None
+
+
+CHANNELS = {"0": "stereo", "1": "left", "2": "right"}           # cmd 512 values
+CHANNEL_CODES = {v: k for k, v in CHANNELS.items()}
+LSSDP_CHANNELS = {"S": "stereo", "L": "left", "R": "right"}    # DeviceState 2nd letter
+
+
+def channel_from_lssdp(fields: dict[str, str]) -> str | None:
+    """DeviceState is '<role>,<channel>,<playing>', e.g. 'G,L,N' = grouped, left channel, not playing."""
+    parts = fields.get("DeviceState", "").split(",")
+    return LSSDP_CHANNELS.get(parts[1].strip().upper()) if len(parts) > 1 else None
 
 
 def group_from_lssdp(fields: dict[str, str]) -> GroupInfo:

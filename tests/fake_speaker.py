@@ -56,7 +56,7 @@ class FakeSpeaker:
             Cmd.PLAY_STATUS: "0", Cmd.VOLUME: str(volume), Cmd.VOICING: "V103", Cmd.ROOM: "shelf",
             Cmd.PLAYER: json.dumps(player or EMPTY_PLAYER), Cmd.VOICING_LIST: json.dumps(VOICINGS),
             Cmd.ROOM_LIST: json.dumps(ROOMS), Cmd.CHANNELS: json.dumps(CHANNELS), Cmd.BATTERY: "100",
-            Cmd.CHARGING: "2", Cmd.SIGNAL: "-89,-34,5/5", Cmd.MUTE: "UNMUTE",
+            Cmd.CHARGING: "2", Cmd.SIGNAL: "-89,-34,5/5", Cmd.MUTE: "UNMUTE", Cmd.COLOR: "2002",
         }
         self.received: list[p.Frame] = []
         self.ip: str | None = None
@@ -66,6 +66,7 @@ class FakeSpeaker:
         self.name = name
         # group state as reported via LSSDP: "F" free, "M" master, "S" slave
         self.lssdp_state = "F"
+        self.channel = "S"           # LSSDP letter: S stereo / L left / R right
         self.zone = ""
         self.lssdp_queries = 0
 
@@ -98,7 +99,7 @@ class FakeSpeaker:
         reply = (
             "HTTP/1.1 200 OK\r\nHOST: 239.255.255.250:1800\r\nPROTOCOL: Version 1.0\r\n"
             f"DeviceName: {self.name}_{self.serial}\r\nDeviceID: c467b5000000\r\n"
-            f"DeviceState: {self.lssdp_state},S,N\r\nPORT: 7777\r\nZoneID: {self.zone}\r\n"
+            f"DeviceState: {self.lssdp_state},{self.channel},N\r\nPORT: 7777\r\nZoneID: {self.zone}\r\n"
             f"Creator: \r\nIPAddr: {self.ip}\r\nStereoPairID: \r\n"
         )
         # like the real speakers: reply goes to the searcher's port 7778, from another socket
@@ -126,6 +127,11 @@ class FakeSpeaker:
                 self.values[Cmd.POWER_MODE] = "2"
             elif frame.cmd == Cmd.TIMER and frame.text == "00":
                 self.values[Cmd.POWER_MODE] = "0"
+            elif frame.cmd == Cmd.CHANNEL:
+                self.channel = {"0": "S", "1": "L", "2": "R"}[frame.text]
+                self._send(frame.cmd, "", p.PORT_RESULT)
+                self.notify(Cmd.CHANNEL, frame.text)      # the real speaker echoes it as a notification
+                return
             elif frame.cmd == Cmd.PLAY_CONTROL and frame.text == "PAUSE":
                 self.values[Cmd.PLAY_STATUS] = "2"
             self._send(frame.cmd, "", p.PORT_RESULT)  # empty ack like the real thing

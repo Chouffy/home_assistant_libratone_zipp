@@ -1,7 +1,6 @@
 """Media player entity for Libratone speakers."""
 from __future__ import annotations
 
-import random
 
 from homeassistant.components.media_player import (
     MediaPlayerDeviceClass,
@@ -229,7 +228,7 @@ class LibratoneMediaPlayer(LibratoneEntity, MediaPlayerEntity, RestoreEntity):
         link_id = master.group_link_id if master.group_role == "MASTER" else None
         if not link_id:
             # Same shape the app uses: <MasterName>_<MasterSerial>_<random>
-            link_id = f"{master.name or master.display_name}_{master.serial or 'x'}_{random.randint(10**9, 2**31 - 1)}"
+            link_id = master.new_link_id()
             master.group_join(link_id)
         for member in members:
             member.group_join(link_id)

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import random
 import logging
 import time
 from typing import TYPE_CHECKING, Any, Callable
@@ -73,6 +74,8 @@ class LibratoneSpeaker:
         self.timer: int | None = None
         self.group_role: str | None = None
         self.group_link_id: str | None = None
+        self.channel: str | None = None      # stereo / left / right
+        self.color: str | None = None        # e.g. 2002; part of the app's link ids
 
         self._listeners: list[Callable[[], None]] = []
 
@@ -217,6 +220,10 @@ class LibratoneSpeaker:
                 return isinstance(data, list) and self._set("channels", data)
             if cmd == Cmd.NAME:
                 return self._set("name", text or self.name)
+            if cmd == Cmd.CHANNEL:
+                return self._set("channel", p.CHANNELS.get(text[:1], self.channel))
+            if cmd == Cmd.COLOR:
+                return self._set("color", text or self.color)
             if cmd == Cmd.SERIAL:
                 return self._set("serial", text or self.serial)
             if cmd == Cmd.VERSION:
@@ -259,6 +266,30 @@ class LibratoneSpeaker:
         self.request(*(p.POLL_SLOW if full else ()), *p.POLL_FAST)
         # group state isn't readable with a GET; the LSSDP status reply carries it
         self.hub.send(self.host, p.LSSDP_MSEARCH, port=p.PORT_LSSDP)
+
+    def apply_lssdp(self, fields: dict[str, str]) -> tuple[bool, bool]:
+        """Apply an LSSDP status. Returns (group changed, anything else changed)."""
+        group_changed = self.apply_group(p.group_from_lssdp(fields))
+        channel = p.channel_from_lssdp(fields)
+        other_changed = channel is not None and self._set("channel", channel)
+        return group_changed, other_changed
+
+    def set_channel(self, channel: str) -> bool:
+        """stereo / left / right"""
+        code = p.CHANNEL_CODES.get(channel)
+        if code is None:
+            return False
+        self._send(Cmd.CHANNEL, code)
+        if self._set("channel", channel):  # optimistic; the notification / next LSSDP poll confirms
+            self.notify()
+        return True
+
+    def new_link_id(self) -> str:
+        """Same shape as the app: <Name>_<Serial>-<Color>_<random>"""
+        serial = self.serial or "x"
+        if self.color:
+            serial = f"{serial}-{self.color}"
+        return f"{self.name or self.display_name}_{serial}_{random.randint(10**9, 2**31 - 1)}"
 
     def apply_group(self, info: p.GroupInfo) -> bool:
         """Set group role/link id (from LSSDP or a 103 notification). Returns True if changed."""

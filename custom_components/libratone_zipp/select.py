@@ -14,7 +14,7 @@ from .entity import LibratoneEntity
 async def async_setup_entry(
     hass: HomeAssistant, entry: LibratoneConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    async_add_entities([RoomPlacementSelect(entry, entry.runtime_data)])
+    async_add_entities([RoomPlacementSelect(entry, entry.runtime_data), ChannelSelect(entry, entry.runtime_data)])
 
 
 class RoomPlacementSelect(LibratoneEntity, SelectEntity):
@@ -43,3 +43,26 @@ class RoomPlacementSelect(LibratoneEntity, SelectEntity):
             raise HomeAssistantError(f"{self.speaker.display_name} is not reachable")
         if not self.speaker.set_room(option):
             raise ServiceValidationError(f"Unknown room placement: {option}")
+
+
+class ChannelSelect(LibratoneEntity, SelectEntity):
+    """Which audio channel the speaker plays: both (stereo), left or right. Mostly useful when linked."""
+
+    _attr_translation_key = "channel"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_icon = "mdi:speaker-multiple"
+    _attr_options = ["stereo", "left", "right"]
+
+    def __init__(self, entry, speaker) -> None:
+        super().__init__(entry, speaker)
+        self._attr_unique_id = f"{entry.entry_id}_channel"
+
+    @property
+    def current_option(self) -> str | None:
+        return self.speaker.channel
+
+    async def async_select_option(self, option: str) -> None:
+        if not self.speaker.available:
+            raise HomeAssistantError(f"{self.speaker.display_name} is not reachable")
+        if not self.speaker.set_channel(option):
+            raise ServiceValidationError(f"Unknown channel: {option}")

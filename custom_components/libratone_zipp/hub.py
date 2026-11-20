@@ -124,7 +124,8 @@ class LibratoneHub:
         if spk.group_role in ("MASTER", "SLAVE"):
             return spk.group_role == "MASTER"
         link = spk.group_link_id or ""
-        if spk.serial and f"_{spk.serial}_" in link:
+        # the app appends the color code: <Name>_<Serial>-<Color>_<random>
+        if spk.serial and (f"_{spk.serial}_" in link or f"_{spk.serial}-" in link):
             return True
         name = spk.name or spk.expected_name
         return bool(name) and link.startswith(f"{name}_")
@@ -206,9 +207,12 @@ class LibratoneHub:
         spk = self.by_host(ip)
         if fields is None or spk is None:
             return
-        if spk.apply_group(p.group_from_lssdp(fields)):
+        group_changed, other_changed = spk.apply_lssdp(fields)
+        if group_changed:
             for s in self.speakers:
                 s.notify()
+        elif other_changed:
+            spk.notify()
 
     def _remember(self, ip: str, frame: p.Frame) -> None:
         info = self.seen.setdefault(ip, {})

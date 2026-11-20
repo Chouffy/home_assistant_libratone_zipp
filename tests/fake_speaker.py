@@ -40,6 +40,14 @@ class _Proto(asyncio.DatagramProtocol):
         self.fake._on_packet(data, addr[0])
 
 
+class _LssdpProto(asyncio.DatagramProtocol):
+    def __init__(self, fake: "FakeSpeaker") -> None:
+        self.fake = fake
+
+    def datagram_received(self, data, addr) -> None:
+        self.fake._on_msearch(data, addr[0])
+
+
 class FakeSpeaker:
     def __init__(self, serial: str, name: str, player: dict | None = None, volume: int = 16) -> None:
         self.serial = serial
@@ -54,19 +62,47 @@ class FakeSpeaker:
         self.ip: str | None = None
         self.controller: str = "127.0.0.1"
         self._transport: asyncio.DatagramTransport | None = None
+        self._lssdp: asyncio.DatagramTransport | None = None
+        self.name = name
+        # group state as reported via LSSDP: "F" free, "M" master, "S" slave
+        self.lssdp_state = "F"
+        self.zone = ""
+        self.lssdp_queries = 0
 
     async def start(self, ip: str) -> "FakeSpeaker":
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind((ip, p.PORT_CONTROL))
-        self._transport, _ = await asyncio.get_running_loop().create_datagram_endpoint(
-            lambda: _Proto(self), sock=sock)
+        loop = asyncio.get_running_loop()
+        self._transport, _ = await loop.create_datagram_endpoint(lambda: _Proto(self), sock=sock)
+        lsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        lsock.bind((ip, p.PORT_LSSDP))
+        self._lssdp, _ = await loop.create_datagram_endpoint(lambda: _LssdpProto(self), sock=lsock)
         self.ip = ip
         return self
 
     def stop(self) -> None:
-        if self._transport:
-            self._transport.close()
-            self._transport = None
+        for t in (self._transport, self._lssdp):
+            if t:
+                t.close()
+        self._transport = self._lssdp = None
+
+    def set_group(self, state: str, link_id: str = "") -> None:
+        """What LSSDP reports: state F/M/S, link id without the 'LINK ' prefix."""
+        self.lssdp_state = state
+        self.zone = f"LINK {link_id}" if link_id else ""
+
+    def _on_msearch(self, data: bytes, src: str) -> None:
+        if not data.startswith(b"M-SEARCH") or not self._lssdp:
+            return
+        self.lssdp_queries += 1
+        reply = (
+            "HTTP/1.1 200 OK\r\nHOST: 239.255.255.250:1800\r\nPROTOCOL: Version 1.0\r\n"
+            f"DeviceName: {self.name}_{self.serial}\r\nDeviceID: c467b5000000\r\n"
+            f"DeviceState: {self.lssdp_state},S,N\r\nPORT: 7777\r\nZoneID: {self.zone}\r\n"
+            f"Creator: \r\nIPAddr: {self.ip}\r\nStereoPairID: \r\n"
+        )
+        # like the real speakers: reply goes to the searcher's port 7778, from another socket
+        self._lssdp.sendto(reply.encode(), (src, p.PORT_RESULT))
 
     async def move(self, ip: str) -> None:
         """Simulate DHCP handing out a new address."""

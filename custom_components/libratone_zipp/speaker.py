@@ -236,9 +236,7 @@ class LibratoneSpeaker:
                 if info is None:
                     _LOGGER.debug("%s: unknown group payload %r", self, text)
                     return False
-                changed = self._set("group_role", info.role)
-                changed |= self._set("group_link_id", info.link_id)
-                return changed
+                return self.apply_group(info)
         except Exception:  # never let a weird payload break the receive path
             _LOGGER.debug("%s: failed to parse cmd %s data %r", self, cmd, frame.data, exc_info=True)
         return False
@@ -259,6 +257,14 @@ class LibratoneSpeaker:
 
     def refresh(self, full: bool = False) -> None:
         self.request(*(p.POLL_SLOW if full else ()), *p.POLL_FAST)
+        # group state isn't readable with a GET; the LSSDP status reply carries it
+        self.hub.send(self.host, p.LSSDP_MSEARCH, port=p.PORT_LSSDP)
+
+    def apply_group(self, info: p.GroupInfo) -> bool:
+        """Set group role/link id (from LSSDP or a 103 notification). Returns True if changed."""
+        changed = self._set("group_role", info.role)
+        changed |= self._set("group_link_id", info.link_id)
+        return changed
 
     def _after_command(self, *extra: int) -> None:
         """Re-read state shortly after a command (plus any slow-polled value it changed)."""

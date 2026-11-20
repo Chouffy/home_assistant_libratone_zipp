@@ -159,6 +159,9 @@ class LibratoneHub:
 
     # ------------------------------------------------------------------ receiving
     def _on_datagram(self, data: bytes, ip: str, port: int) -> None:
+        if data[:4] in (b"HTTP", b"NOTI"):
+            self._on_lssdp(data, ip)
+            return
         frame = p.parse(data)
         if frame is None:
             return
@@ -195,6 +198,17 @@ class LibratoneHub:
                 for member in self.group_members(spk):
                     if member is not spk:
                         member.notify()
+
+    def _on_lssdp(self, data: bytes, ip: str) -> None:
+        """LSSDP status reply: authoritative group state. Deliberately NOT a sign of life:
+        the LSSDP service kept answering while a speaker's control service was hung."""
+        fields = p.parse_lssdp(data)
+        spk = self.by_host(ip)
+        if fields is None or spk is None:
+            return
+        if spk.apply_group(p.group_from_lssdp(fields)):
+            for s in self.speakers:
+                s.notify()
 
     def _remember(self, ip: str, frame: p.Frame) -> None:
         info = self.seen.setdefault(ip, {})

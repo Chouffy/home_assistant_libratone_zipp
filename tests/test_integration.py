@@ -142,6 +142,9 @@ async def test_grouping(hass: HomeAssistant, fakes) -> None:
     assert arwen.sets(Cmd.GROUP_JOIN) == [link]
 
     # speakers confirm with notifications; only "GROUPED" first -> master inferred from link id
+    link_id = link[5:]
+    legolas.set_group("M", link_id)
+    arwen.set_group("S", link_id)
     for fake in (legolas, arwen):
         fake.notify(Cmd.GROUP, f"GROUPED,{link}")
     await wait_for(lambda: hass.states.get("media_player.arwen").attributes.get("group_members")
@@ -154,6 +157,7 @@ async def test_grouping(hass: HomeAssistant, fakes) -> None:
     await wait_for(lambda: arwen.sets(Cmd.GROUP_LEAVE) and legolas.sets(Cmd.GROUP_LEAVE))
     assert arwen.sets(Cmd.GROUP_LEAVE) == [link] and legolas.sets(Cmd.GROUP_LEAVE) == [link]
     for fake in (legolas, arwen):
+        fake.set_group("F")
         fake.notify(Cmd.GROUP, "FREE")
     await wait_for(lambda: hass.states.get("media_player.arwen").attributes.get("group_members") is None)
     assert hass.states.get("media_player.arwen").attributes.get("media_title") is None
@@ -201,3 +205,45 @@ async def test_zeroconf_new_speaker(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["data"] == {"host": "127.0.0.8", "name": "Legolas", CONF_SERIAL: LEGOLAS}
     await hass.async_block_till_done()
+
+
+async def test_group_state_known_without_notifications(hass: HomeAssistant, fakes) -> None:
+    """Linked before HA started (no 103 notification ever arrives): LSSDP polling must find the group."""
+    legolas = await fakes("127.0.0.3", serial=LEGOLAS, name="Legolas", player=SPOTIFY_PLAYER)
+    arwen = await fakes("127.0.0.2", serial=ARWEN, name="Arwen")
+    link_id = f"Legolas_{LEGOLAS}_1353413036"
+    legolas.set_group("M", link_id)
+    arwen.set_group("S", link_id)
+    await setup(hass, entry_for("127.0.0.3", "Legolas", LEGOLAS))
+    await setup(hass, entry_for("127.0.0.2", "Arwen", ARWEN))
+
+    await wait_for(lambda: hass.states.get("media_player.arwen").attributes.get("group_members")
+                   == ["media_player.legolas", "media_player.arwen"])
+    assert hass.states.get("media_player.legolas").attributes["group_role"] == "MASTER"
+    assert hass.states.get("media_player.arwen").attributes["group_role"] == "SLAVE"
+    assert hass.states.get("media_player.arwen").attributes["group_link_id"] == link_id
+    assert hass.states.get("media_player.arwen").attributes["media_title"] == "Sweet Child O' Mine"
+
+    # linked but idle: both report "G" (grouped, no roles yet) -> master inferred from the link id
+    legolas.set_group("G", link_id)
+    arwen.set_group("G", link_id)
+    await wait_for(lambda: hass.states.get("media_player.arwen").attributes.get("group_role") == "GROUPED")
+    await wait_for(lambda: hass.states.get("media_player.legolas").attributes.get("group_role") == "GROUPED")
+    assert hass.states.get("media_player.arwen").attributes["group_members"] == ["media_player.legolas", "media_player.arwen"]
+
+    # unlinked in the app while HA wasn't listening -> next poll clears it
+    legolas.set_group("F")
+    arwen.set_group("F")
+    await wait_for(lambda: hass.states.get("media_player.arwen").attributes.get("group_members") is None)
+    assert hass.states.get("media_player.legolas").attributes["group_role"] is None
+
+
+async def test_lssdp_is_not_a_sign_of_life(hass: HomeAssistant, fakes) -> None:
+    """A hung speaker still answered LSSDP: that must not keep it 'available'."""
+    arwen = await fakes("127.0.0.2", serial=ARWEN, name="Arwen")
+    await setup(hass, entry_for("127.0.0.2", "Arwen", ARWEN))
+    await wait_for(lambda: hass.states.get("media_player.arwen").state == "playing")
+    await wait_for(lambda: arwen.lssdp_queries > 0)
+    arwen._transport.close()            # control service dies, LSSDP keeps answering
+    arwen._transport = None
+    await wait_for(lambda: hass.states.get("media_player.arwen").state == "unavailable")

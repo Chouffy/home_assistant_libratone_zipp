@@ -31,6 +31,10 @@ PORT_CONTROL = 7777
 PORT_RESULT = 7778
 PORT_NOTIFY = 3333
 PORT_NOTIFY_ACK = 3334
+PORT_LSSDP = 1800       # speaker: LSSDP discovery (Libre); answers M-SEARCH on our PORT_RESULT
+
+# Exactly what the app sends (no trailing blank line). Reply: "HTTP/1.1 200 OK" + header lines, see parse_lssdp.
+LSSDP_MSEARCH = b"M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1800\r\nPROTOCOL:Version 1.0"
 
 REMOTE_ID = b"\xaa\xaa"
 HEADER_LEN = 10
@@ -175,6 +179,31 @@ def parse_group(text: str) -> GroupInfo | None:
         link_id = rest[5:].strip()
         return GroupInfo(role=role.upper(), link_id=link_id or None)
     return None
+
+
+def parse_lssdp(packet: bytes) -> dict[str, str] | None:
+    """Parse an LSSDP reply/notify into its header fields, or None if it isn't one."""
+    if not packet.startswith((b"HTTP/1.1 200 OK", b"NOTIFY * HTTP/1.1")):
+        return None
+    fields: dict[str, str] = {}
+    for line in packet.decode("utf-8", errors="replace").replace("\r", "").split("\n")[1:]:
+        key, sep, value = line.partition(":")
+        if sep:
+            fields[key.strip()] = value.strip()
+    return fields if "DeviceState" in fields else None
+
+
+def group_from_lssdp(fields: dict[str, str]) -> GroupInfo:
+    """DeviceState 'M,..' / 'S,..' / 'G,..' / 'F,..' = master / slave / grouped (linked, roles not assigned
+    yet: seen while nothing plays) / free; ZoneID = 'LINK <link id>'.
+    Verified with two Zipps (firmware 879), see libratone-sniffing/weekend/findings/2026-11-20_lssdp."""
+    state = fields.get("DeviceState", "")[:1].upper()
+    zone = fields.get("ZoneID", "")
+    link_id = zone[5:].strip() if zone.upper().startswith("LINK ") else (zone.strip() or None)
+    role = {"M": "MASTER", "S": "SLAVE", "G": "GROUPED"}.get(state)
+    if role is None:
+        return GroupInfo(role=None, link_id=None)
+    return GroupInfo(role=role, link_id=link_id)
 
 
 def parse_timer(data: bytes) -> int | None:

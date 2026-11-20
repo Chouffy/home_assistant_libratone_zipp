@@ -333,3 +333,34 @@ async def test_sleep_timer(hass: HomeAssistant, fakes) -> None:
     await wait_for(lambda: arwen.sets(Cmd.TIMER)[-1:] == ["F0"])
     await wait_for(lambda: hass.states.get(eid).state == "0")
     assert hass.states.get("media_player.arwen").state == "playing"    # never put to sleep
+
+
+async def test_save_favorite(hass: HomeAssistant, fakes) -> None:
+    """Like the app's '+': SET 276 with the playing station (real payload shape from session 21-favorite)."""
+    import json
+
+    import pytest
+    from homeassistant.exceptions import ServiceValidationError
+
+    legolas = await fakes("127.0.0.3", serial=LEGOLAS, name="Legolas", player={
+        "isFromChannel": True, "play_identity": "3", "play_title": "Radio Paradise",
+        "play_subtitle": "", "play_token": "", "play_type": "channel"})
+    legolas.values[Cmd.SOURCE_STATE] = bytes.fromhex("3f100045030000")
+    await setup(hass, entry_for("127.0.0.3", "Legolas", LEGOLAS))
+    eid = "media_player.legolas"
+    await wait_for(lambda: hass.states.get(eid).attributes.get("source") == "3: Radio Paradise")
+
+    await hass.services.async_call(DOMAIN, "save_favorite", {"entity_id": eid, "slot": 1}, blocking=True)
+    await wait_for(lambda: legolas.sets(Cmd.CHANNEL_SAVE))
+    assert json.loads(legolas.sets(Cmd.CHANNEL_SAVE)[0]) == {
+        "channel_id": 1, "channel_identity": "1003", "channel_name": "Radio Paradise",
+        "channel_type": "vtuner", "isPlaying": False}
+    await wait_for(lambda: hass.states.get(eid).attributes["source_list"][0] == "1: Radio Paradise")
+
+    # Spotify playing: nothing to save
+    legolas.values[Cmd.PLAYER] = json.dumps(SPOTIFY_PLAYER)
+    legolas.values[Cmd.SOURCE_STATE] = bytes.fromhex("340c00f3040000")
+    await wait_for(lambda: hass.states.get(eid).attributes.get("source") == "Spotify")
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(DOMAIN, "save_favorite", {"entity_id": eid, "slot": 2}, blocking=True)
+    assert len(legolas.sets(Cmd.CHANNEL_SAVE)) == 1

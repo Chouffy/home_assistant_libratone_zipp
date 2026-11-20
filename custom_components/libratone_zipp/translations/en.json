@@ -43,5 +43,17 @@
         "name": "Sleep timer"
       }
     }
+  },
+  "services": {
+    "save_favorite": {
+      "name": "Save favorite",
+      "description": "Saves the radio station that is playing now into one of the speaker's five favorite slots (like '+' in the Libratone app). Only works while a radio station plays.",
+      "fields": {
+        "slot": {
+          "name": "Slot",
+          "description": "Favorite slot 1-5 to overwrite."
+        }
+      }
+    }
   }
 }

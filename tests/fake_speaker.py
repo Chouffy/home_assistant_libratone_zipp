@@ -134,6 +134,11 @@ class FakeSpeaker:
                 self.values[Cmd.POWER_MODE] = "2"
             elif frame.cmd == Cmd.TIMER and frame.text == "00":
                 self.values[Cmd.POWER_MODE] = "0"
+            elif frame.cmd == Cmd.CHANNEL_SAVE:
+                entry = json.loads(frame.text)
+                channels = [c for c in json.loads(self.values[Cmd.CHANNELS]) if c["channel_id"] != entry["channel_id"]]
+                channels.append(entry)
+                self.values[Cmd.CHANNELS] = json.dumps(sorted(channels, key=lambda c: c["channel_id"]))
             elif frame.cmd == Cmd.TIMER and frame.text == "F0":
                 self.values[Cmd.TIMER] = b"\xff" * 5
             elif frame.cmd == Cmd.TIMER and frame.text.startswith("2"):

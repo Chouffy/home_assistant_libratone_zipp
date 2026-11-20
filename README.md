@@ -77,13 +77,13 @@ Roadmap (status after v5, 2026-11-20):
 * Standby
     * [x] Set a standby (sleep) timer: `number.<speaker>_sleep_timer`, minutes, 0 = off
     * [x] Retrieve a standby timer (shows the remaining time, counts down)
-    * [ ] Auto-standby time (cmd 528 reads `300`; setting it is unknown)
+    * [ ] Auto-standby time (cmd 528 reads `300`; the app has no setting for it)
 * Voicing & Room Setting
     * [x] Set Room Setting (`select.<speaker>_room_placement`)
     * [x] Retrieve current Room Setting
 * Favorites
     * [x] Play a favorite (proper title, from the speaker's favorite list)
-    * [ ] Set a Favorite (command unknown; needs a capture of "save favorite" in the app)
+    * [x] Set a Favorite: service `libratone_zipp.save_favorite` (slot 1-5) saves the radio station playing now
 * Extended current playback info
     * [ ] Set / retrieve shuffle, repeat (not exposed by the speaker; Spotify controls it)
     * [ ] Set Source (not possible; the app can't either, except the favorites)

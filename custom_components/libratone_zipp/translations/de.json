@@ -43,5 +43,17 @@
         "name": "Schlaf-Timer"
       }
     }
+  },
+  "services": {
+    "save_favorite": {
+      "name": "Favorit speichern",
+      "description": "Speichert den gerade laufenden Radiosender in einem der fünf Favoritenplätze des Lautsprechers (wie '+' in der Libratone-App). Funktioniert nur, während ein Radiosender läuft.",
+      "fields": {
+        "slot": {
+          "name": "Platz",
+          "description": "Favoritenplatz 1-5, der überschrieben wird."
+        }
+      }
+    }
   }
 }

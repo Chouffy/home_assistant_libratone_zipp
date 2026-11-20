@@ -360,6 +360,37 @@ class LibratoneSpeaker:
                 return True
         return False
 
+    def current_station(self) -> dict | None:
+        """The radio station playing now as a favorites entry, or None (Spotify, Bluetooth, nothing)."""
+        pl = self.player
+        if self.bluetooth_playing or (pl.get("play_type") or "").lower() not in ("channel", "vtuner", "tunein"):
+            return None
+        ident = str(pl.get("play_identity") or "")
+        if not ident:
+            return None
+        for ch in self.channels:   # playing a favorite: play_identity is the slot number or the station id
+            if ident in (str(ch.get("channel_id")), str(ch.get("channel_identity"))):
+                return {k: ch[k] for k in ("channel_identity", "channel_name", "channel_type") if k in ch}
+        if ident.isdigit() and len(ident) > 1:   # a station started elsewhere: play_identity is its vTuner id
+            return {"channel_identity": ident, "channel_name": pl.get("play_title") or ident,
+                    "channel_type": "vtuner"}
+        return None
+
+    def save_favorite(self, slot: int) -> bool:
+        """Store the station playing now in favorite slot 1..5 (what the app's '+' does: SET 276)."""
+        station = self.current_station()
+        if station is None or not 1 <= int(slot) <= 5:
+            return False
+        payload = json.dumps(
+            {"channel_id": int(slot), "channel_identity": str(station["channel_identity"]),
+             "channel_name": station.get("channel_name", ""), "channel_type": station.get("channel_type", "vtuner"),
+             "isPlaying": False},
+            separators=(",", ":"),
+        )
+        self._send(Cmd.CHANNEL_SAVE, payload)
+        self._after_command(Cmd.CHANNELS)
+        return True
+
     def play_favorite(self, favorite: str | int) -> bool:
         """Accepts a channel id (1..5) or a label as produced by favorite_names."""
         fid = str(favorite).split(":", 1)[0].strip()

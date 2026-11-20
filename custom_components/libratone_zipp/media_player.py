@@ -1,6 +1,8 @@
 """Media player entity for Libratone speakers."""
 from __future__ import annotations
 
+import voluptuous as vol
+
 
 from homeassistant.components.media_player import (
     MediaPlayerDeviceClass,
@@ -11,6 +13,7 @@ from homeassistant.components.media_player import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
@@ -45,6 +48,11 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: LibratoneConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     async_add_entities([LibratoneMediaPlayer(entry, entry.runtime_data)])
+    entity_platform.async_get_current_platform().async_register_entity_service(
+        "save_favorite",
+        {vol.Required("slot"): vol.All(vol.Coerce(int), vol.Range(min=1, max=5))},
+        "async_save_favorite",
+    )
 
 
 class LibratoneMediaPlayer(LibratoneEntity, MediaPlayerEntity, RestoreEntity):
@@ -207,6 +215,14 @@ class LibratoneMediaPlayer(LibratoneEntity, MediaPlayerEntity, RestoreEntity):
         self._require_available()
         if not self._media_source.play_favorite(source):
             raise ServiceValidationError(f"Unknown favorite: {source}")
+
+    async def async_save_favorite(self, slot: int) -> None:
+        """Save the radio station playing now into favorite slot 1-5."""
+        self._require_available()
+        if not self._media_source.save_favorite(slot):
+            raise ServiceValidationError(
+                f"{self.speaker.display_name} isn't playing a radio station that can be saved as a favorite"
+            )
 
     async def async_select_sound_mode(self, sound_mode: str) -> None:
         self._require_available()

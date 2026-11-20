@@ -60,6 +60,7 @@ class Cmd(IntEnum):
     BATTERY = 256
     BATTERY_ALT = 257
     CHANNELS = 275          # JSON list of the 5 favorites
+    CHANNEL_SAVE = 276      # SET JSON {channel_id (slot), channel_identity, channel_name, channel_type, isPlaying}
     PLAYER_SET = 277        # JSON, used to start a favorite
     PLAYER = 278            # JSON with title/artist/album/cover/source
     GROUP_JOIN = 502        # "LINK <link_id>"

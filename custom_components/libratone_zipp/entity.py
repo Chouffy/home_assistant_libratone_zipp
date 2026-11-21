@@ -62,13 +62,13 @@ class LibratoneEntity(Entity):
         if url and dev.configuration_url != url:
             changes["configuration_url"] = url
         if spk.mac and (dr.CONNECTION_NETWORK_MAC, spk.mac) not in dev.connections:
-            changes["merge_connections"] = {(dr.CONNECTION_NETWORK_MAC, spk.mac)}
+            changes["new_connections"] = set(dev.connections) | {(dr.CONNECTION_NETWORK_MAC, spk.mac)}
         if not changes:
             return
         try:
             registry.async_update_device(dev.id, **changes)
         except Exception as err:  # e.g. a connection collision; cosmetic, never break the entity
-            changes.pop("merge_connections", None)
+            changes.pop("new_connections", None)
             if changes:
                 registry.async_update_device(dev.id, **changes)
             _LOGGER.debug("Device update for %s partly failed: %s", spk, err)

@@ -14,7 +14,8 @@ from .entity import LibratoneEntity
 async def async_setup_entry(
     hass: HomeAssistant, entry: LibratoneConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    async_add_entities([RoomPlacementSelect(entry, entry.runtime_data), ChannelSelect(entry, entry.runtime_data)])
+    spk = entry.runtime_data
+    async_add_entities([RoomPlacementSelect(entry, spk), ChannelSelect(entry, spk), SaveFavoriteSelect(entry, spk)])
 
 
 class RoomPlacementSelect(LibratoneEntity, SelectEntity):
@@ -66,3 +67,31 @@ class ChannelSelect(LibratoneEntity, SelectEntity):
             raise HomeAssistantError(f"{self.speaker.display_name} is not reachable")
         if not self.speaker.set_channel(option):
             raise ServiceValidationError(f"Unknown channel: {option}")
+
+
+class SaveFavoriteSelect(LibratoneEntity, SelectEntity):
+    """The app's '+': pick a slot to store the radio station that is playing now. Always shows no selection."""
+
+    _attr_translation_key = "save_favorite"
+    _attr_icon = "mdi:star-plus-outline"
+
+    def __init__(self, entry, speaker) -> None:
+        super().__init__(entry, speaker)
+        self._attr_unique_id = f"{entry.entry_id}_save_favorite"
+
+    @property
+    def available(self) -> bool:
+        return super().available and bool(self.speaker.channels) and self.speaker.current_station() is not None
+
+    @property
+    def options(self) -> list[str]:
+        return self.speaker.favorite_names or ["1", "2", "3", "4", "5"]
+
+    @property
+    def current_option(self) -> str | None:
+        return None
+
+    async def async_select_option(self, option: str) -> None:
+        slot = int(option.split(":", 1)[0])
+        if not self.speaker.save_favorite(slot):
+            raise ServiceValidationError(f"{self.speaker.display_name} isn't playing a radio station")

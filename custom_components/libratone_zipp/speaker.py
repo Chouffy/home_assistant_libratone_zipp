@@ -77,6 +77,8 @@ class LibratoneSpeaker:
         self.channel: str | None = None      # stereo / left / right
         self.source_state: bytes = b""       # cmd 10, see protocol.MODE_*
         self.lssdp_playing: bool | None = None
+        self.dlna = None                     # LibratoneDlna, set by the HA layer
+        self.dlna_media: dict = {}           # what we last started via DLNA: title / image / artist
         self.color: str | None = None        # e.g. 2002; part of the app's link ids
 
         self._listeners: list[Callable[[], None]] = []
@@ -161,14 +163,26 @@ class LibratoneSpeaker:
         return "play_artist" in self.player
 
     @property
+    def is_dlna(self) -> bool:
+        return bool(self.source_state) and self.source_state[0] == p.MODE_DLNA
+
+    def _dlna(self, key: str) -> str | None:
+        """While DLNA plays, the speaker's player JSON is empty: show what we started."""
+        return self.dlna_media.get(key) if self.is_dlna else None
+
+    @property
     def media_title(self) -> str | None:
         pl = self.player
+        if self.is_dlna:
+            return self._dlna("title")
         if self._has_track_info:
             return pl.get("play_subtitle") or pl.get("play_title") or None
         return pl.get("play_title") or None
 
     @property
     def media_artist(self) -> str | None:
+        if self.is_dlna:
+            return self._dlna("artist")
         key = "play_artist" if self._has_track_info else "play_subtitle"
         return self.player.get(key) or None
 
@@ -182,6 +196,8 @@ class LibratoneSpeaker:
 
     @property
     def media_image_url(self) -> str | None:
+        if self.is_dlna:
+            return self._dlna("image")
         uri = self.player.get("play_album_uri") or ""
         return uri if uri.startswith(("http://", "https://")) else None
 
@@ -194,6 +210,8 @@ class LibratoneSpeaker:
         """Current favorite name if a favorite is playing, otherwise the source type."""
         if self.bluetooth_playing:
             return "Bluetooth"
+        if self.is_dlna:
+            return "DLNA"
         pl = self.player
         ident = str(pl.get("play_identity") or "")
         for ch in self.channels:

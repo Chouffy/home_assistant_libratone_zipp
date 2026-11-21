@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from ipaddress import ip_address
 
 from homeassistant import config_entries
@@ -364,3 +365,47 @@ async def test_save_favorite(hass: HomeAssistant, fakes) -> None:
     with pytest.raises(ServiceValidationError):
         await hass.services.async_call(DOMAIN, "save_favorite", {"entity_id": eid, "slot": 2}, blocking=True)
     assert len(legolas.sets(Cmd.CHANNEL_SAVE)) == 1
+
+
+async def test_play_media_via_dlna(hass: HomeAssistant, fakes) -> None:
+    from unittest.mock import AsyncMock, patch
+
+    legolas = await fakes("127.0.0.3", serial=LEGOLAS, name="Legolas")
+    with patch("custom_components.libratone_zipp.dlna.LibratoneDlna.async_play", new=AsyncMock()) as play:
+        await setup(hass, entry_for("127.0.0.3", "Legolas", LEGOLAS))
+        eid = "media_player.legolas"
+        await wait_for(lambda: hass.states.get(eid).state == "playing")
+        await hass.services.async_call("media_player", "play_media", {
+            "entity_id": eid, "media_content_id": "http://stream.example/radio.mp3",
+            "media_content_type": "music", "extra": {"title": "Test stream", "thumb": "http://img.example/c.jpg"},
+        }, blocking=True)
+        play.assert_awaited_once()
+        url, title, mtype = play.await_args.args[:3]
+        assert (url, title, mtype) == ("http://stream.example/radio.mp3", "Test stream", "music")
+    # the speaker switches to DLNA mode (0x32, real value) with an empty player
+    legolas.values[Cmd.SOURCE_STATE] = bytes.fromhex("321700c7030000")
+    legolas.values[Cmd.PLAYER] = json.dumps({"isFromChannel": False, "play_type": "channel", "play_identity": ""})
+    await wait_for(lambda: hass.states.get(eid).attributes.get("source") == "DLNA")
+    attrs = hass.states.get(eid).attributes
+    assert attrs["media_title"] == "Test stream"
+    assert "entity_picture" in attrs
+
+
+async def test_save_favorite_select(hass: HomeAssistant, fakes) -> None:
+    legolas = await fakes("127.0.0.3", serial=LEGOLAS, name="Legolas", player={
+        "isFromChannel": True, "play_identity": "3", "play_title": "Radio Paradise",
+        "play_subtitle": "", "play_token": "", "play_type": "channel"})
+    legolas.values[Cmd.SOURCE_STATE] = bytes.fromhex("3f100045030000")
+    await setup(hass, entry_for("127.0.0.3", "Legolas", LEGOLAS))
+    eid = "select.legolas_save_playing_station_as_favorite"
+    await wait_for(lambda: hass.states.get(eid).state == "unknown")       # available, nothing selected
+    assert hass.states.get(eid).attributes["options"][0] == "1: BBC Radio 6 Music"
+    await hass.services.async_call("select", "select_option", {"entity_id": eid, "option": "1: BBC Radio 6 Music"},
+                                   blocking=True)
+    await wait_for(lambda: legolas.sets(Cmd.CHANNEL_SAVE))
+    assert json.loads(legolas.sets(Cmd.CHANNEL_SAVE)[0])["channel_id"] == 1
+    await wait_for(lambda: hass.states.get(eid).attributes["options"][0] == "1: Radio Paradise")
+    # Spotify playing -> nothing to save -> unavailable
+    legolas.values[Cmd.PLAYER] = json.dumps(SPOTIFY_PLAYER)
+    legolas.values[Cmd.SOURCE_STATE] = bytes.fromhex("340c00f3040000")
+    await wait_for(lambda: hass.states.get(eid).state == "unavailable")

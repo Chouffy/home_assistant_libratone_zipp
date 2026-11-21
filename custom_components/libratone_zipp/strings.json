@@ -36,6 +36,9 @@
           "left": "Left",
           "right": "Right"
         }
+      },
+      "save_favorite": {
+        "name": "Save playing station as favorite"
       }
     },
     "number": {

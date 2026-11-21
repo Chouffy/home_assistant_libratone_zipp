@@ -4,7 +4,11 @@ from __future__ import annotations
 import voluptuous as vol
 
 
+from homeassistant.components import media_source
 from homeassistant.components.media_player import (
+    ATTR_MEDIA_EXTRA,
+    BrowseMedia,
+    async_process_play_media_url,
     MediaPlayerDeviceClass,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
@@ -34,6 +38,8 @@ FEATURES = (
     | MediaPlayerEntityFeature.TURN_ON
     | MediaPlayerEntityFeature.TURN_OFF
     | MediaPlayerEntityFeature.GROUPING
+    | MediaPlayerEntityFeature.PLAY_MEDIA
+    | MediaPlayerEntityFeature.BROWSE_MEDIA
 )
 
 STATE_MAP = {
@@ -194,7 +200,43 @@ class LibratoneMediaPlayer(LibratoneEntity, MediaPlayerEntity, RestoreEntity):
 
     async def _play_control(self, action: str) -> None:
         self._require_available()
-        self._media_source.play_control(action)
+        target = self._media_source
+        if target.is_dlna and target.dlna is not None and action in ("play", "pause", "stop"):
+            await target.dlna.async_control(action)   # the Libratone command doesn't reach the renderer
+            self._hub.schedule_refresh(target)
+            return
+        target.play_control(action)
+
+    # ------------------------------------------------------------------ DLNA: play media / browse
+    async def async_play_media(self, media_type: str, media_id: str, **kwargs) -> None:
+        """Play a URL / media-source item (Radio Browser, local media, TTS) via the speaker's DLNA renderer."""
+        self._require_available()
+        target = self._media_source   # in a group the master streams to the others
+        if target.dlna is None:
+            raise HomeAssistantError("DLNA is not available for this speaker")
+        title = ""
+        if media_source.is_media_source_id(media_id):
+            sourced = await media_source.async_resolve_media(self.hass, media_id, self.entity_id)
+            media_type, media_id = sourced.mime_type, sourced.url
+        media_id = async_process_play_media_url(self.hass, media_id)
+        extra = kwargs.get(ATTR_MEDIA_EXTRA) or {}
+        metadata = dict(extra.get("metadata") or {})
+        title = extra.get("title") or metadata.get("title") or title or media_id.rsplit("/", 1)[-1] or "Home Assistant"
+        image = extra.get("thumb") or metadata.get("image_url")
+        await target.dlna.async_play(media_id, title, media_type, metadata)
+        target.dlna_media = {"title": title, "image": image, "artist": metadata.get("artist")}
+        self._hub.schedule_refresh(target)
+
+    async def async_browse_media(self, media_content_type: str | None = None,
+                                 media_content_id: str | None = None) -> BrowseMedia:
+        types = await self.speaker.dlna.sink_content_types() if self.speaker.dlna else None
+
+        def _playable(item: BrowseMedia) -> bool:
+            if not types:
+                return item.media_content_type.startswith("audio")
+            return item.media_content_type.lower().replace("/x-", "/", 1).partition(";")[0] in types
+
+        return await media_source.async_browse_media(self.hass, media_content_id, content_filter=_playable)
 
     async def async_media_play(self) -> None:
         await self._play_control("play")

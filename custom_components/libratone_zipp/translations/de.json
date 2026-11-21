@@ -36,6 +36,9 @@
           "left": "Links",
           "right": "Rechts"
         }
+      },
+      "save_favorite": {
+        "name": "Laufenden Sender als Favorit speichern"
       }
     },
     "number": {

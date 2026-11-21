@@ -205,6 +205,7 @@ MODE_STREAM = 0x34      # network streaming, details in PLAYER play_type (e.g. s
 MODE_RADIO = 0x3F       # radio favorite (PLAYER isFromChannel / play_identity = favorite number)
 MODE_LOCAL = 0x41       # Bluetooth or idle
 MODE_SLAVE = 0x3B       # group slave
+MODE_DLNA = 0x32        # DLNA/UPnP renderer playing (player JSON stays empty)
 BT_PLAYING = 0x08       # SOURCE_STATE byte 2 while Bluetooth audio plays
 
 

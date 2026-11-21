@@ -81,6 +81,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: LibratoneConfigEntry) ->
         aliases=tuple(n for n in (entry.data.get(CONF_NAME),) if n),
     )
     entry.runtime_data = spk
+    from .dlna import LibratoneDlna   # HA-side helper; speaker.py stays HA-free
+    spk.dlna = LibratoneDlna(hass, spk)
 
     if not spk.serial:
         await _identify(hub, spk)

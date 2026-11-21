@@ -92,6 +92,26 @@ Roadmap (status after v5, 2026-11-20):
     * [x] Set speaker mode (stereo, left, right): `select.<speaker>_audio_channel`
     * [x] Group state that survives restarts (LSSDP)
     * [ ] Add better media player cards
+* One player instead of two (Libratone + DLNA)
+    * [ ] Register the speaker's MAC (LSSDP `DeviceID`) as device connection, so it shares one device page with the DLNA / FRITZ!Box entries
+    * [ ] `play_media` + media browser via the speaker's own UPnP renderer (AVTransport on :49152, `async-upnp-client`):
+          local media, Radio Browser, TTS. Then the separate DLNA entity isn't needed any more
+* Other models
+    * [ ] Use the model from mDNS (`model=LTH300`) instead of a fixed "Zipp"
+    * [ ] Test Zipp Mini / Zipp 2 / Zipp Mini 2 (one capture or a test run with each is enough)
+* Colors and names
+    * [ ] Read color (cmd 770, e.g. `2002`) and show it; set it (SET 771 per the decompiled app, untested). Known codes: 1001 Pepper Black, 2005 Sangria
+    * [ ] Product images like in the app (load from Libratone at runtime, don't ship them)
+    * [ ] Rename the speaker (SET 90 per the decompiled app, untested)
+* Network and diagnostics
+    * [ ] WiFi signal (529 / LSSDP `WifiInfo`), SSID (539), MAC, firmware as diagnostic sensors
+    * [ ] Bluetooth: connection state / pairing (not visible on the network side so far)
+* Setup without the app (in case Libratone's app/servers go away)
+    * [ ] WiFi setup through the speaker's own web UI (`cgi?Network` -> `cgi?SetNet`), incl. a factory-new speaker's setup hotspot (needs a capture)
+    * [ ] Factory reset (SET 150, known; not exposed on purpose yet)
+* Radio
+    * [x] Favorites: play by name, save the playing station (`libratone_zipp.save_favorite`)
+    * [ ] Any station: via `play_media` (Radio Browser stream URLs over UPnP), independent of vTuner/Libratone
 
 ## Development
 

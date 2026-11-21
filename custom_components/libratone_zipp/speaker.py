@@ -341,6 +341,13 @@ class LibratoneSpeaker:
         except ValueError:
             return None
 
+    def set_color(self, code: str) -> None:
+        """SET 771 (verified: NOTIFY 771 echo, GET 770 follows; LSSDP ColorCode only updates later)."""
+        self._send(Cmd.COLOR_SET, code)
+        if self._set("color", code):
+            self.notify()
+        self._after_command(Cmd.COLOR)
+
     def set_name(self, name: str) -> None:
         """Rename the speaker (SET 90, verified: it echoes NOTIFY 90 and LSSDP/AirPlay follow)."""
         name = name.strip()

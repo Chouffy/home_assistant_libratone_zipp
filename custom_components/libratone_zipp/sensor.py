@@ -7,7 +7,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import LibratoneConfigEntry
-from .const import COLORS
 from .entity import LibratoneEntity
 
 
@@ -17,7 +16,6 @@ async def async_setup_entry(
     spk = entry.runtime_data
     async_add_entities([
         BatterySensor(entry, spk),
-        ColorSensor(entry, spk),
         WifiSignalSensor(entry, spk),
         TextDiagnostic(entry, spk, "wifi_network", "mdi:wifi", lambda s: s.ssid),
         TextDiagnostic(entry, spk, "ip_address", "mdi:ip-network", lambda s: s.host or None),
@@ -37,26 +35,6 @@ class BatterySensor(LibratoneEntity, SensorEntity):
     @property
     def native_value(self) -> int | None:
         return self.speaker.battery
-
-
-class ColorSensor(LibratoneEntity, SensorEntity):
-    """The speaker's color as stored on the speaker (the app shows it). Helps telling speakers apart."""
-
-    _attr_translation_key = "color"
-    _attr_icon = "mdi:palette"
-
-    def __init__(self, entry, speaker) -> None:
-        super().__init__(entry, speaker)
-        self._attr_unique_id = f"{entry.entry_id}_color"
-
-    @property
-    def native_value(self) -> str | None:
-        code = self.speaker.color
-        return COLORS.get(code, f"Code {code}") if code else None
-
-    @property
-    def extra_state_attributes(self) -> dict:
-        return {"color_code": self.speaker.color}
 
 
 class WifiSignalSensor(LibratoneEntity, SensorEntity):

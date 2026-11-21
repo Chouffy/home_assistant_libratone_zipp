@@ -39,6 +39,9 @@
       },
       "save_favorite": {
         "name": "Laufenden Sender als Favorit speichern"
+      },
+      "color": {
+        "name": "Farbe"
       }
     },
     "number": {
@@ -47,9 +50,6 @@
       }
     },
     "sensor": {
-      "color": {
-        "name": "Farbe"
-      },
       "wifi_signal": {
         "name": "WLAN-Signal"
       },

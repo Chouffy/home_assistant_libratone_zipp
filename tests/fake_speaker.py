@@ -135,6 +135,11 @@ class FakeSpeaker:
                 self.values[Cmd.POWER_MODE] = "2"
             elif frame.cmd == Cmd.TIMER and frame.text == "00":
                 self.values[Cmd.POWER_MODE] = "0"
+            elif frame.cmd == Cmd.COLOR_SET:
+                self.values[Cmd.COLOR] = frame.text
+                self._send(frame.cmd, "", p.PORT_RESULT)
+                self.notify(Cmd.COLOR_SET, frame.text)
+                return
             elif frame.cmd == Cmd.NAME:
                 self.values[Cmd.NAME] = frame.text
                 self.name = frame.text

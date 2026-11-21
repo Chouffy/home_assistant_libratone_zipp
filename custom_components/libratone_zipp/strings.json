@@ -39,6 +39,9 @@
       },
       "save_favorite": {
         "name": "Save playing station as favorite"
+      },
+      "color": {
+        "name": "Color"
       }
     },
     "number": {
@@ -47,9 +50,6 @@
       }
     },
     "sensor": {
-      "color": {
-        "name": "Color"
-      },
       "wifi_signal": {
         "name": "WiFi signal"
       },

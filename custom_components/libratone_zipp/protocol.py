@@ -78,6 +78,7 @@ class Cmd(IntEnum):
     SSID = 539              # '"FRITZ!Box 7272"' (with quotes)
     SERIAL = 769
     COLOR = 770
+    COLOR_SET = 771         # SET '<code>', e.g. 2002 (verified)
     CHARGING = 1284
 
 

@@ -8,14 +8,17 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import LibratoneConfigEntry
+from .const import COLOR_CODES_BY_NAME, COLORS
 from .entity import LibratoneEntity
+from .pictures import swatch
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: LibratoneConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     spk = entry.runtime_data
-    async_add_entities([RoomPlacementSelect(entry, spk), ChannelSelect(entry, spk), SaveFavoriteSelect(entry, spk)])
+    async_add_entities([RoomPlacementSelect(entry, spk), ChannelSelect(entry, spk), SaveFavoriteSelect(entry, spk),
+                        ColorSelect(entry, spk)])
 
 
 class RoomPlacementSelect(LibratoneEntity, SelectEntity):
@@ -95,3 +98,32 @@ class SaveFavoriteSelect(LibratoneEntity, SelectEntity):
         slot = int(option.split(":", 1)[0])
         if not self.speaker.save_favorite(slot):
             raise ServiceValidationError(f"{self.speaker.display_name} isn't playing a radio station")
+
+
+class ColorSelect(LibratoneEntity, SelectEntity):
+    """The speaker's color as stored on the speaker (the app shows it; it can't change the fabric, obviously)."""
+
+    _attr_translation_key = "color"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_options = [name for name, _hex in COLORS.values()]
+
+    def __init__(self, entry, speaker) -> None:
+        super().__init__(entry, speaker)
+        self._attr_unique_id = f"{entry.entry_id}_color_select"
+
+    @property
+    def current_option(self) -> str | None:
+        return COLORS.get(self.speaker.color or "", (None, None))[0]
+
+    @property
+    def entity_picture(self) -> str | None:
+        return swatch(self.speaker.color) if self.speaker.color else None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return {"color_code": self.speaker.color, "hex": COLORS.get(self.speaker.color or "", (None, None))[1]}
+
+    async def async_select_option(self, option: str) -> None:
+        if not self.speaker.available:
+            raise HomeAssistantError(f"{self.speaker.display_name} is not reachable")
+        self.speaker.set_color(COLOR_CODES_BY_NAME[option])

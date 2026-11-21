@@ -100,9 +100,8 @@ Roadmap (status after v5, 2026-11-20):
     * [x] Model from the speaker's UPnP description (`LTH300` -> Zipp) instead of a fixed "Zipp"
     * [ ] Test Zipp Mini / Zipp 2 / Zipp Mini 2 (one capture or a test run with each is enough)
 * Colors and names
-    * [x] Read color (`sensor.<speaker>_color`). Known codes: 1001 Pepper Black, 2002 Graphite Grey, 2005 Sangria; more via `color_map.py`
-    * [ ] Set the color (SET 771 per the decompiled app, untested)
-    * [ ] Product images like in the app (load from Libratone at runtime, don't ship them)
+    * [x] Read and set the color (`select.<speaker>_color`, all 15 colors mapped, SET 771 verified), with a color swatch
+    * [x] Picture: the media player shows a drawn Zipp in the speaker's color when there's no cover (no Libratone images shipped)
     * [x] Rename the speaker (`text.<speaker>_speaker_name`, SET 90, verified)
 * Network and diagnostics
     * [x] WiFi signal, WiFi network, IP address as diagnostic sensors; firmware, MAC and a link to the speaker's web UI on the device page
@@ -112,6 +111,7 @@ Roadmap (status after v5, 2026-11-20):
     * [ ] Factory reset (SET 150, known; not exposed on purpose yet)
 * Radio
     * [x] Favorites: play by name, save the playing station (`select.<speaker>_save_playing_station_as_favorite` or `libratone_zipp.save_favorite`)
+    * [ ] Save Spotify content as a favorite (the app can; needs a capture)
     * [x] Any station: via `play_media` / media browser (e.g. Radio Browser), independent of vTuner/Libratone
 
 ## Help wanted: other Libratone speakers

@@ -111,6 +111,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: LibratoneConfigEntry) ->
             hass.config_entries.async_schedule_reload(entry.entry_id)
 
     entry.async_on_unload(spk.add_listener(_sync_entry))
+
+    # the read-only color sensor was replaced by a color select
+    ent_reg = er.async_get(hass)
+    if old := ent_reg.async_get_entity_id("sensor", DOMAIN, f"{entry.entry_id}_color"):
+        ent_reg.async_remove(old)
     _sync_entry()
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

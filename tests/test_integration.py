@@ -409,3 +409,28 @@ async def test_save_favorite_select(hass: HomeAssistant, fakes) -> None:
     legolas.values[Cmd.PLAYER] = json.dumps(SPOTIFY_PLAYER)
     legolas.values[Cmd.SOURCE_STATE] = bytes.fromhex("340c00f3040000")
     await wait_for(lambda: hass.states.get(eid).state == "unavailable")
+
+
+async def test_name_color_diagnostics_and_device(hass: HomeAssistant, fakes) -> None:
+    from homeassistant.helpers import device_registry as dr
+
+    arwen = await fakes("127.0.0.2", serial=ARWEN, name="Arwen")
+    await setup(hass, entry_for("127.0.0.2", "Arwen", ARWEN))
+    await wait_for(lambda: hass.states.get("sensor.arwen_color").state == "Graphite Grey")
+    assert hass.states.get("sensor.arwen_color").attributes["color_code"] == "2002"
+    await wait_for(lambda: hass.states.get("sensor.arwen_wifi_network").state == "FRITZ!Box 7272")
+    assert hass.states.get("sensor.arwen_wifi_signal").state == "100"            # "5/5" bars
+    assert hass.states.get("sensor.arwen_ip_address").state == "127.0.0.2"
+
+    # rename on the speaker
+    await wait_for(lambda: hass.states.get("text.arwen_speaker_name").state == "Arwen")
+    await hass.services.async_call("text", "set_value", {"entity_id": "text.arwen_speaker_name", "value": "Arwen-test"},
+                                   blocking=True)
+    await wait_for(lambda: arwen.sets(Cmd.NAME) == ["Arwen-test"])
+    await wait_for(lambda: hass.states.get("text.arwen_speaker_name").state == "Arwen-test")
+
+    # device: MAC from LSSDP DeviceID, link to the speaker's web UI
+    dev = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, ARWEN), hass.config_entries.async_entries(DOMAIN)[0].entry_id)
+    await wait_for(lambda: (dr.CONNECTION_NETWORK_MAC, "c4:67:b5:00:00:00")
+                   in dr.async_get(hass).async_get(dev.id).connections)
+    assert dr.async_get(hass).async_get(dev.id).configuration_url == "http://127.0.0.2/"

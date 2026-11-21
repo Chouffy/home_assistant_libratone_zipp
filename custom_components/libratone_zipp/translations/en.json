@@ -45,6 +45,25 @@
       "sleep_timer": {
         "name": "Sleep timer"
       }
+    },
+    "sensor": {
+      "color": {
+        "name": "Color"
+      },
+      "wifi_signal": {
+        "name": "WiFi signal"
+      },
+      "wifi_network": {
+        "name": "WiFi network"
+      },
+      "ip_address": {
+        "name": "IP address"
+      }
+    },
+    "text": {
+      "speaker_name": {
+        "name": "Speaker name"
+      }
     }
   },
   "services": {

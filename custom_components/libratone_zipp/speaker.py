@@ -80,6 +80,9 @@ class LibratoneSpeaker:
         self.dlna = None                     # LibratoneDlna, set by the HA layer
         self.dlna_media: dict = {}           # what we last started via DLNA: title / image / artist
         self.color: str | None = None        # e.g. 2002; part of the app's link ids
+        self.ssid: str | None = None
+        self.mac: str | None = None          # from LSSDP DeviceID, aa:bb:cc:dd:ee:ff
+        self.model: str | None = None        # e.g. LTH300, from the UPnP description (HA layer)
 
         self._listeners: list[Callable[[], None]] = []
 
@@ -280,6 +283,8 @@ class LibratoneSpeaker:
                 return self._set("charging", text)
             if cmd == Cmd.SIGNAL:
                 return self._set("signal", text)
+            if cmd == Cmd.SSID:
+                return self._set("ssid", text.strip('"').strip() or None)
             if cmd == Cmd.MUTE:
                 return self._set("muted", text.upper() == "MUTE")
             if cmd == Cmd.TIMER:
@@ -319,11 +324,30 @@ class LibratoneSpeaker:
         channel = p.channel_from_lssdp(fields)
         other_changed = channel is not None and self._set("channel", channel)
         other_changed |= self._set("lssdp_playing", p.playing_from_lssdp(fields))
+        dev_id = fields.get("DeviceID", "").strip().lower()
+        if len(dev_id) == 12:
+            other_changed |= self._set("mac", ":".join(dev_id[i:i + 2] for i in range(0, 12, 2)))
         return group_changed, other_changed
 
     def _recheck_lssdp(self) -> None:
         if self.host:
             self.hub.send(self.host, p.LSSDP_MSEARCH, port=p.PORT_LSSDP)
+
+    @property
+    def wifi_bars(self) -> int | None:
+        """'-89,-34,5/5' -> 5"""
+        try:
+            return int((self.signal or "").rsplit(",", 1)[-1].split("/")[0])
+        except ValueError:
+            return None
+
+    def set_name(self, name: str) -> None:
+        """Rename the speaker (SET 90, verified: it echoes NOTIFY 90 and LSSDP/AirPlay follow)."""
+        name = name.strip()
+        self._send(Cmd.NAME, name)
+        if self._set("name", name):
+            self.notify()
+        self._after_command(Cmd.NAME)
 
     def set_channel(self, channel: str) -> bool:
         """stereo / left / right"""

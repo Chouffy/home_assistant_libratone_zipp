@@ -93,25 +93,40 @@ Roadmap (status after v5, 2026-11-20):
     * [x] Group state that survives restarts (LSSDP)
     * [ ] Add better media player cards
 * One player instead of two (Libratone + DLNA)
-    * [ ] Register the speaker's MAC (LSSDP `DeviceID`) as device connection, so it shares one device page with the DLNA / FRITZ!Box entries
-    * [ ] `play_media` + media browser via the speaker's own UPnP renderer (AVTransport on :49152, `async-upnp-client`):
-          local media, Radio Browser, TTS. Then the separate DLNA entity isn't needed any more
+    * [x] Register the speaker's MAC (LSSDP `DeviceID`) as device connection (note: current HA versions no longer merge devices across integrations)
+    * [x] `play_media` + media browser via the speaker's own UPnP renderer (AVTransport on :49152, `async-upnp-client`):
+          local media, Radio Browser, TTS. The separate DLNA entity isn't needed any more
 * Other models
-    * [ ] Use the model from mDNS (`model=LTH300`) instead of a fixed "Zipp"
+    * [x] Model from the speaker's UPnP description (`LTH300` -> Zipp) instead of a fixed "Zipp"
     * [ ] Test Zipp Mini / Zipp 2 / Zipp Mini 2 (one capture or a test run with each is enough)
 * Colors and names
-    * [ ] Read color (cmd 770, e.g. `2002`) and show it; set it (SET 771 per the decompiled app, untested). Known codes: 1001 Pepper Black, 2005 Sangria
+    * [x] Read color (`sensor.<speaker>_color`). Known codes: 1001 Pepper Black, 2002 Graphite Grey, 2005 Sangria; more via `color_map.py`
+    * [ ] Set the color (SET 771 per the decompiled app, untested)
     * [ ] Product images like in the app (load from Libratone at runtime, don't ship them)
-    * [ ] Rename the speaker (SET 90 per the decompiled app, untested)
+    * [x] Rename the speaker (`text.<speaker>_speaker_name`, SET 90, verified)
 * Network and diagnostics
-    * [ ] WiFi signal (529 / LSSDP `WifiInfo`), SSID (539), MAC, firmware as diagnostic sensors
+    * [x] WiFi signal, WiFi network, IP address as diagnostic sensors; firmware, MAC and a link to the speaker's web UI on the device page
     * [ ] Bluetooth: connection state / pairing (not visible on the network side so far)
 * Setup without the app (in case Libratone's app/servers go away)
     * [ ] WiFi setup through the speaker's own web UI (`cgi?Network` -> `cgi?SetNet`), incl. a factory-new speaker's setup hotspot (needs a capture)
     * [ ] Factory reset (SET 150, known; not exposed on purpose yet)
 * Radio
-    * [x] Favorites: play by name, save the playing station (`libratone_zipp.save_favorite`)
-    * [ ] Any station: via `play_media` (Radio Browser stream URLs over UPnP), independent of vTuner/Libratone
+    * [x] Favorites: play by name, save the playing station (`select.<speaker>_save_playing_station_as_favorite` or `libratone_zipp.save_favorite`)
+    * [x] Any station: via `play_media` / media browser (e.g. Radio Browser), independent of vTuner/Libratone
+
+## Help wanted: other Libratone speakers
+
+Tested: **Zipp** (LTH300, firmware 879). The first-generation **Zipp Mini** is known to work the same way.
+If you own one of these, a short test would help a lot:
+
+| Speaker | Expected |
+|---|---|
+| Zipp 2 / Zipp Mini 2 | probably mostly works (extra features like Alexa won't be exposed) |
+| Classic, Diva, Loop, Live, Lounge | unknown (WiFi models, maybe the same protocol) |
+| ONE, TOO | Bluetooth only: not supported |
+
+What to report (open an issue): the model shown on the device page (or `model=` from the speaker's AirPlay
+mDNS record), which entities work, and the log with `custom_components.libratone_zipp: debug`.
 
 ## Development
 

@@ -84,6 +84,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: LibratoneConfigEntry) ->
     from .dlna import LibratoneDlna   # HA-side helper; speaker.py stays HA-free
     spk.dlna = LibratoneDlna(hass, spk)
 
+    async def _fetch_model() -> None:
+        if (model := await spk.dlna.async_model()) and model != spk.model:
+            spk.model = model
+            spk.notify()
+
+    entry.async_create_background_task(hass, _fetch_model(), "libratone_model")
+
     if not spk.serial:
         await _identify(hub, spk)
         if spk.serial:

@@ -66,6 +66,14 @@ class LibratoneDlna:
             return self._device
         raise HomeAssistantError(f"No DLNA renderer found on {self.speaker.display_name}: {last_err}")
 
+    async def async_model(self) -> str | None:
+        """'LTH300' from the UPnP description (modelName + modelNumber)."""
+        try:
+            upnp = (await self._get_device()).device
+        except HomeAssistantError:
+            return None
+        return f"{upnp.model_name or ''}{upnp.model_number or ''}".strip() or None
+
     async def sink_content_types(self) -> set[str] | None:
         """Content types the renderer accepts (e.g. audio/mpeg), or None if unknown."""
         try:

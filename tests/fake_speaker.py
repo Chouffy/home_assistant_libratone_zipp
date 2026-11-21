@@ -58,7 +58,8 @@ class FakeSpeaker:
             Cmd.ROOM_LIST: json.dumps(ROOMS), Cmd.CHANNELS: json.dumps(CHANNELS), Cmd.BATTERY: "100",
             Cmd.CHARGING: "2", Cmd.SIGNAL: "-89,-34,5/5", Cmd.MUTE: "UNMUTE", Cmd.COLOR: "2002",
             Cmd.SOURCE_STATE: bytes.fromhex("340c00f3040000"),
-            Cmd.TIMER: b"\xff" * 5,   # real values: see findings/2026-11-20_sources
+            Cmd.TIMER: b"\xff" * 5,
+            Cmd.SSID: '"FRITZ!Box 7272"',   # real values: see findings/2026-11-20_sources
         }
         self.received: list[p.Frame] = []
         self.ip: str | None = None
@@ -134,6 +135,12 @@ class FakeSpeaker:
                 self.values[Cmd.POWER_MODE] = "2"
             elif frame.cmd == Cmd.TIMER and frame.text == "00":
                 self.values[Cmd.POWER_MODE] = "0"
+            elif frame.cmd == Cmd.NAME:
+                self.values[Cmd.NAME] = frame.text
+                self.name = frame.text
+                self._send(frame.cmd, "", p.PORT_RESULT)
+                self.notify(Cmd.NAME, frame.text)
+                return
             elif frame.cmd == Cmd.CHANNEL_SAVE:
                 entry = json.loads(frame.text)
                 channels = [c for c in json.loads(self.values[Cmd.CHANNELS]) if c["channel_id"] != entry["channel_id"]]

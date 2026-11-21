@@ -74,7 +74,8 @@ class Cmd(IntEnum):
     MUTE = 520              # MUTE / UNMUTE
     VOICING_LIST = 524      # JSON list
     ROOM_LIST = 525         # JSON list
-    SIGNAL = 529            # "-89,-34,5/5"
+    SIGNAL = 529            # "-89,-34,5/5" (last part = bars)
+    SSID = 539              # '"FRITZ!Box 7272"' (with quotes)
     SERIAL = 769
     COLOR = 770
     CHARGING = 1284
@@ -116,6 +117,7 @@ POLL_SLOW: tuple[Cmd, ...] = (
     Cmd.BATTERY,
     Cmd.CHARGING,
     Cmd.SIGNAL,
+    Cmd.SSID,
     Cmd.MUTE,
     Cmd.COLOR,
 )

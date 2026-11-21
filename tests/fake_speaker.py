@@ -59,7 +59,8 @@ class FakeSpeaker:
             Cmd.CHARGING: "2", Cmd.SIGNAL: "-89,-34,5/5", Cmd.MUTE: "UNMUTE", Cmd.COLOR: "2002",
             Cmd.SOURCE_STATE: bytes.fromhex("340c00f3040000"),
             Cmd.TIMER: b"\xff" * 5,
-            Cmd.SSID: '"FRITZ!Box 7272"',   # real values: see findings/2026-11-20_sources
+            Cmd.SSID: '"FRITZ!Box 7272"',
+            Cmd.PRIVATE_MODE: "0",                      # touch-panel mute   # real values: see findings/2026-11-20_sources
         }
         self.received: list[p.Frame] = []
         self.ip: str | None = None

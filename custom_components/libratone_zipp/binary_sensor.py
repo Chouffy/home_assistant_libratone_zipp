@@ -1,4 +1,4 @@
-"""Muted (read-only): the speaker mutes itself when its touch panel is held."""
+"""Muted (read-only): holding the touch panel mutes the speaker ("private mode", pushed by the speaker)."""
 from __future__ import annotations
 
 from homeassistant.components.binary_sensor import BinarySensorEntity

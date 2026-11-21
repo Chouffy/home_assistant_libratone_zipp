@@ -429,8 +429,10 @@ async def test_name_color_diagnostics_and_device(hass: HomeAssistant, fakes) -> 
 
     # mute set on the speaker (touch panel held) -> read-only binary sensor
     await wait_for(lambda: hass.states.get("binary_sensor.arwen_muted").state == "off")
-    arwen.values[Cmd.MUTE] = "MUTE"
+    arwen.notify(Cmd.PRIVATE_MODE, "1")      # pushed immediately by the real speaker
     await wait_for(lambda: hass.states.get("binary_sensor.arwen_muted").state == "on")
+    arwen.values[Cmd.PRIVATE_MODE] = "0"     # released: next poll
+    await wait_for(lambda: hass.states.get("binary_sensor.arwen_muted").state == "off")
 
     # rename on the speaker
     await wait_for(lambda: hass.states.get("text.arwen_speaker_name").state == "Arwen")

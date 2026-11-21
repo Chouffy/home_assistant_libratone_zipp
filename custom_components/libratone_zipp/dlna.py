@@ -20,7 +20,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 if TYPE_CHECKING:
-    from .speaker import LibratoneSpeaker
+    from python_libratone_zipp import LibratoneSpeaker
 
 _LOGGER = logging.getLogger(__name__)
 

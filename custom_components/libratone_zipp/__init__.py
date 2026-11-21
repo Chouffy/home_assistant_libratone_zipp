@@ -11,8 +11,7 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from .const import CONF_SERIAL, DOMAIN, PLATFORMS
-from .hub import LibratoneHub
-from .speaker import LibratoneSpeaker
+from python_libratone_zipp import LibratoneHub, LibratoneSpeaker
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -9,7 +9,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import Entity
 
 from .const import DOMAIN, MANUFACTURER, MODELS
-from .speaker import LibratoneSpeaker
+from python_libratone_zipp import LibratoneSpeaker
 
 _LOGGER = logging.getLogger(__name__)
 

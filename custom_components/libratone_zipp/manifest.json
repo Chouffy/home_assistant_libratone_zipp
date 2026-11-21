@@ -7,7 +7,7 @@
   "integration_type": "device",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/Chouffy/home_assistant_libratone_zipp/issues",
-  "requirements": ["async-upnp-client==0.48.2"],
+  "requirements": ["python_libratone_zipp==5.0.0", "async-upnp-client==0.48.2"],
   "after_dependencies": ["media_source"],
   "version": "5.0.0",
   "zeroconf": [

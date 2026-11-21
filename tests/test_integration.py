@@ -13,7 +13,7 @@ from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.libratone_zipp.const import CONF_SERIAL, DOMAIN
-from custom_components.libratone_zipp.protocol import Cmd
+from python_libratone_zipp.protocol import Cmd
 
 from .fake_speaker import SPOTIFY_PLAYER
 

@@ -2,7 +2,7 @@
 
 This controls Libratone Zipp speakers from [Home Assistant](https://www.home-assistant.io/).
 
-Since v5 the protocol code lives inside the integration (`custom_components/libratone_zipp/{protocol,speaker,hub}.py`, asyncio, no external dependency).
+It uses [python_libratone_zipp](https://github.com/Chouffy/python_libratone_zipp) 5.x (asyncio) for the speaker protocol.
 Speakers are identified by **serial number**, not IP: when a speaker comes back from sleep/power-off with a new DHCP address, the integration finds it again by itself (zeroconf, plus a small UDP sweep of the subnet while a speaker is missing).
 
 ## Limitations / Known bugs
@@ -54,7 +54,7 @@ Current coverage suits me, even if the python integration has much more options.
 * v4.1 
     * [x] Implement SoundSpace Link
 * v5.0
-    * [x] Async, built-in protocol code (no PyPI dependency)
+    * [x] Async, based on python_libratone_zipp 5.0 (asyncio)
     * [x] Speakers tracked by serial number; automatic recovery after IP changes, proper `unavailable` state
     * [x] Push updates instead of 5 s polling
     * [x] Artist, album, playlist, cover art, current source (Spotify, favorite name, ...)

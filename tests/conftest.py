@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 import pytest_socket
 
-from custom_components.libratone_zipp import hub as hub_mod, speaker as speaker_mod
+from python_libratone_zipp import hub as hub_mod, speaker as speaker_mod
 import custom_components.libratone_zipp as integration
 
 from .fake_speaker import FakeSpeaker

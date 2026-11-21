@@ -9,8 +9,8 @@ import asyncio
 import json
 import socket
 
-from custom_components.libratone_zipp import protocol as p
-from custom_components.libratone_zipp.protocol import Cmd
+from python_libratone_zipp import protocol as p
+from python_libratone_zipp.protocol import Cmd
 
 SPOTIFY_PLAYER = {
     "isFromChannel": False,

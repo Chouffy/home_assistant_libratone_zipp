@@ -24,7 +24,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from . import LibratoneConfigEntry, entity_unique_id, legacy_unique_id
 from .entity import LibratoneEntity
 from .pictures import zipp
-from .speaker import LibratoneSpeaker
+from python_libratone_zipp import LibratoneSpeaker
 
 FEATURES = (
     MediaPlayerEntityFeature.PLAY

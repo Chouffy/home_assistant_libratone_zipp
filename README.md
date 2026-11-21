@@ -7,12 +7,15 @@ Speakers are identified by **serial number**, not IP: when a speaker comes back 
 
 ## Limitations / Known bugs
 
-* Sources can't be switched from Home Assistant except the five favorites (the app can't either: Spotify is
-  controlled via Spotify Connect, Bluetooth from the phone). They are detected though: Spotify, Bluetooth, favorites.
+* Sources can't be switched from Home Assistant except the five favorites and media started from Home Assistant
+  (DLNA). The app can't either: Spotify is controlled via Spotify Connect, Bluetooth from the phone.
+  They are detected though, see [Sources](#sources).
 * Bluetooth: playback is detected (shown as playing, source "Bluetooth"), whether a phone is *connected* is not.
   Bluetooth has its own volume, which the speaker doesn't report.
-* Mute can be read but not set (command unknown).
-* Playing arbitrary media (`play_media`) is not supported.
+* Mute is read-only (`binary_sensor.<speaker>_muted`): the speaker mutes itself when its touch panel is held,
+  there is no network command to set it.
+* The integration needs UDP ports `7778` and `3333` (the speakers always answer to these) and uses UDP `1800`
+  (LSSDP status) and TCP `49152` (the speaker's DLNA renderer) on the speakers.
 
 ## Usage
 
@@ -63,21 +66,22 @@ Current coverage suits me, even if the python integration has much more options.
     * [x] Group state polled from the speakers' LSSDP status (UDP 1800): correct right after an HA restart
     * [x] Audio channel select (stereo / left / right)
     * [x] Source detection incl. Bluetooth; Bluetooth playback shows as playing (was: only "Play" button)
+    * [x] Play media / media browser / TTS through the speaker's own DLNA renderer (one entity instead of two)
+    * [x] Sleep timer, save favorite, rename, color, mute (read-only), WiFi / IP diagnostics
 
 
-Roadmap (status after v5, 2026-11-20):
+Roadmap (status after v5, 2026-11-21). Open points are free to take: PRs welcome!
 
 * Module
     * [x] Make the module async
     * [ ] Submit it for official integration!
-    * [ ] Add support for other libratone speakers (only Zipp LTH300, firmware 879 tested)
+    * [ ] Add support for other libratone speakers (see [Help wanted](#help-wanted-other-libratone-speakers))
 * Current Playback info
     * [x] Retrieve current playback source
-    * [x] Retrieve media type: bluetooth, spotify, radio (aux untested)
+    * [x] Retrieve media type: see [Sources](#sources) for what is tested
 * Standby
     * [x] Set a standby (sleep) timer: `number.<speaker>_sleep_timer`, minutes, 0 = off
     * [x] Retrieve a standby timer (shows the remaining time, counts down)
-    * [ ] Auto-standby time (cmd 528 reads `300`; the app has no setting for it)
 * Voicing & Room Setting
     * [x] Set Room Setting (`select.<speaker>_room_placement`)
     * [x] Retrieve current Room Setting
@@ -91,36 +95,50 @@ Roadmap (status after v5, 2026-11-20):
 * Multi-room
     * [x] Set speaker mode (stereo, left, right): `select.<speaker>_audio_channel`
     * [x] Group state that survives restarts (LSSDP)
-    * [ ] Add better media player cards
+    * [x] One media player for control and media (DLNA), no second entity needed
 * One player instead of two (Libratone + DLNA)
     * [x] Register the speaker's MAC (LSSDP `DeviceID`) as device connection (note: current HA versions no longer merge devices across integrations)
     * [x] `play_media` + media browser via the speaker's own UPnP renderer (AVTransport on :49152, `async-upnp-client`):
           local media, Radio Browser, TTS. The separate DLNA entity isn't needed any more
 * Other models
     * [x] Model from the speaker's UPnP description (`LTH300` -> Zipp) instead of a fixed "Zipp"
-    * [ ] Test Zipp Mini / Zipp 2 / Zipp Mini 2 (one capture or a test run with each is enough)
+    * [ ] Test Zipp Mini (v5 features) / Zipp 2 / Zipp Mini 2
 * Colors and names
-    * [x] Read and set the color (`select.<speaker>_color`, all 15 colors mapped, SET 771 verified), with a color swatch
-    * [x] Picture: the media player shows a drawn Zipp in the speaker's color when there's no cover (no Libratone images shipped)
+    * [x] Read and set the color (`select.<speaker>_color`, all 15 colors mapped, SET 771 verified)
     * [x] Rename the speaker (`text.<speaker>_speaker_name`, SET 90, verified)
+* Speaker
+    * [x] Mute state, read-only (`binary_sensor.<speaker>_muted`)
+    * [ ] Auto-standby time (cmd 528 reads `300`; the app has no setting for it)
 * Network and diagnostics
     * [x] WiFi signal, WiFi network, IP address as diagnostic sensors; firmware, MAC and a link to the speaker's web UI on the device page
     * [ ] Bluetooth: connection state / pairing (not visible on the network side so far)
-* Setup without the app (in case Libratone's app/servers go away)
+* Firmware, setup and factory reset (in case Libratone's app/servers go away) - contributions welcome
+    * [ ] Firmware update: show "update available" / progress (the speakers push JSON on cmd 65; the web UI has `cgi?Update` incl. local upload)
     * [ ] WiFi setup through the speaker's own web UI (`cgi?Network` -> `cgi?SetNet`), incl. a factory-new speaker's setup hotspot (needs a capture)
-    * [ ] Factory reset (SET 150, known; not exposed on purpose yet)
+    * [ ] Factory reset (`SET 150`, known; deliberately not exposed yet)
 * Radio
     * [x] Favorites: play by name, save the playing station (`select.<speaker>_save_playing_station_as_favorite` or `libratone_zipp.save_favorite`)
     * [ ] Save Spotify content as a favorite (the app can; needs a capture)
     * [x] Any station: via `play_media` / media browser (e.g. Radio Browser), independent of vTuner/Libratone
 
+## Sources
+
+| Source | Status |
+|---|---|
+| Spotify Connect | tested: detected with title, artist, album, cover |
+| Bluetooth | tested: detected while playing (shown as playing) |
+| Radio favorites (vTuner) | tested: play by name, save the playing station |
+| DLNA / media from Home Assistant (Radio Browser, local media, TTS) | tested |
+| AirPlay | not tested yet |
+| AUX in | not tested yet |
+| Tidal, Douban FM, Kaishu, Ximalaya, Baidu, Audiogum | reported by the speaker as supported services (cmd 281), not tested |
+
 ## Help wanted: other Libratone speakers
 
-Tested: **Zipp** (LTH300, firmware 879). The first-generation **Zipp Mini** is known to work the same way.
-If you own one of these, a short test would help a lot:
-
-| Speaker | Expected |
+| Speaker | Status |
 |---|---|
+| Zipp (LTH300, firmware 879) | tested |
+| Zipp Mini (1st gen) | everything that worked on the Zipp up to v4 works the same; v5 features not tested yet |
 | Zipp 2 / Zipp Mini 2 | probably mostly works (extra features like Alexa won't be exposed) |
 | Classic, Diva, Loop, Live, Lounge | unknown (WiFi models, maybe the same protocol) |
 | ONE, TOO | Bluetooth only: not supported |

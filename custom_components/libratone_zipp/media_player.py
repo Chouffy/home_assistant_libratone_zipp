@@ -23,7 +23,6 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from . import LibratoneConfigEntry, entity_unique_id, legacy_unique_id
 from .entity import LibratoneEntity
-from .pictures import zipp
 from python_libratone_zipp import LibratoneSpeaker
 
 FEATURES = (
@@ -112,11 +111,6 @@ class LibratoneMediaPlayer(LibratoneEntity, MediaPlayerEntity, RestoreEntity):
             return MediaPlayerState.OFF
         status = self._media_source.effective_status
         return STATE_MAP.get(status, MediaPlayerState.ON) if status else MediaPlayerState.ON
-
-    @property
-    def entity_picture(self) -> str | None:
-        """Album art while something with a cover plays, otherwise a drawn Zipp in the speaker's color."""
-        return super().entity_picture or zipp(self.speaker.color)
 
     @property
     def volume_level(self) -> float | None:

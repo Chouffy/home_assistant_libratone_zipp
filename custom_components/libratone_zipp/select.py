@@ -10,7 +10,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import LibratoneConfigEntry
 from .const import COLOR_CODES_BY_NAME, COLORS
 from .entity import LibratoneEntity
-from .pictures import swatch
 
 
 async def async_setup_entry(
@@ -114,10 +113,6 @@ class ColorSelect(LibratoneEntity, SelectEntity):
     @property
     def current_option(self) -> str | None:
         return COLORS.get(self.speaker.color or "", (None, None))[0]
-
-    @property
-    def entity_picture(self) -> str | None:
-        return swatch(self.speaker.color) if self.speaker.color else None
 
     @property
     def extra_state_attributes(self) -> dict:

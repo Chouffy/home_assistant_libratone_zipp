@@ -64,6 +64,11 @@
       "speaker_name": {
         "name": "Speaker name"
       }
+    },
+    "binary_sensor": {
+      "muted": {
+        "name": "Muted"
+      }
     }
   },
   "services": {

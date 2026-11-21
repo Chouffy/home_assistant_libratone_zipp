@@ -64,6 +64,11 @@
       "speaker_name": {
         "name": "Lautsprechername"
       }
+    },
+    "binary_sensor": {
+      "muted": {
+        "name": "Stummgeschaltet"
+      }
     }
   },
   "services": {

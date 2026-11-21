@@ -419,16 +419,18 @@ async def test_name_color_diagnostics_and_device(hass: HomeAssistant, fakes) -> 
     eid = "select.arwen_color"
     await wait_for(lambda: hass.states.get(eid).state == "Graphite Grey")
     assert hass.states.get(eid).attributes["hex"] == "#4f4f4f"
-    assert hass.states.get(eid).attributes["entity_picture"].startswith("data:image/svg+xml")
     await hass.services.async_call("select", "select_option", {"entity_id": eid, "option": "Pastel Blue"}, blocking=True)
     await wait_for(lambda: arwen.sets(Cmd.COLOR_SET) == ["2009"])
     await wait_for(lambda: hass.states.get(eid).state == "Pastel Blue")
-    # idle media player shows the drawn Zipp in its color
-    pic = hass.states.get("media_player.arwen").attributes["entity_picture"]
-    assert pic.startswith("data:image/svg+xml") and "bbdbe2" in pic
+
     await wait_for(lambda: hass.states.get("sensor.arwen_wifi_network").state == "FRITZ!Box 7272")
     assert hass.states.get("sensor.arwen_wifi_signal").state == "100"            # "5/5" bars
     assert hass.states.get("sensor.arwen_ip_address").state == "127.0.0.2"
+
+    # mute set on the speaker (touch panel held) -> read-only binary sensor
+    await wait_for(lambda: hass.states.get("binary_sensor.arwen_muted").state == "off")
+    arwen.values[Cmd.MUTE] = "MUTE"
+    await wait_for(lambda: hass.states.get("binary_sensor.arwen_muted").state == "on")
 
     # rename on the speaker
     await wait_for(lambda: hass.states.get("text.arwen_speaker_name").state == "Arwen")

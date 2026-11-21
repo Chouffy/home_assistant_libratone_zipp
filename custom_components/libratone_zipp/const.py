@@ -1,7 +1,14 @@
 from homeassistant.const import Platform
 
 DOMAIN = "libratone_zipp"
-PLATFORMS: list[Platform] = [Platform.MEDIA_PLAYER, Platform.NUMBER, Platform.SELECT, Platform.SENSOR, Platform.TEXT]
+PLATFORMS: list[Platform] = [
+    Platform.BINARY_SENSOR,
+    Platform.MEDIA_PLAYER,
+    Platform.NUMBER,
+    Platform.SELECT,
+    Platform.SENSOR,
+    Platform.TEXT,
+]
 
 CONF_SERIAL = "serial"
 MANUFACTURER = "Libratone"
@@ -11,7 +18,8 @@ MODELS = {"LTH300": "Zipp"}
 
 # Color codes (GET 770 / SET 771) -> (name as in the app, hex). Codes mapped on a Zipp with
 # libratone-sniffing/weekend/color_map.py (2026-11-21); hex from libratone.com's color swatches.
-# Pepper Black, Salty Grey and Signal aren't on the website: their hex values are approximations.
+# 1xxx are the wool covers, 2xxx the mesh covers. Pepper Black, Salty Grey and Signal aren't on the website:
+# their hex values are approximations.
 COLORS: dict[str, tuple[str, str]] = {
     "1001": ("Pepper Black", "#232323"),     # approx.
     "1002": ("Salty Grey", "#c8c5be"),       # approx.

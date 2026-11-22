@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
+import aiohttp
 from async_upnp_client.aiohttp import AiohttpSessionRequester
 from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.exceptions import UpnpError
@@ -88,8 +89,37 @@ class LibratoneDlna:
                 types.add(fmt.lower().replace("/x-", "/", 1).partition(";")[0])
         return types or None
 
+    async def _resolve_stream_url(self, url: str) -> str:
+        """The renderer doesn't follow HTTP redirects or read playlists (UPnP error 716 'resource not found').
+        Follow redirects here and take the first stream from an .m3u/.pls playlist."""
+        if not url.startswith(("http://", "https://")):
+            return url
+        session = async_get_clientsession(self.hass)
+        try:
+            async with session.get(url, allow_redirects=True, timeout=aiohttp.ClientTimeout(total=8)) as resp:
+                final = str(resp.url)
+                ctype = resp.headers.get("Content-Type", "").lower()
+                is_playlist = any(t in ctype for t in ("mpegurl", "scpls", "x-pls")) or \
+                    final.lower().split("?")[0].endswith((".m3u", ".m3u8", ".pls"))
+                if is_playlist and "m3u8" not in final.lower():
+                    text = (await resp.content.read(16384)).decode("utf-8", errors="replace")
+                    for line in text.splitlines():
+                        line = line.strip()
+                        if line.lower().startswith("file") and "=" in line:   # .pls: File1=http://...
+                            line = line.split("=", 1)[1].strip()
+                        if line.startswith(("http://", "https://")):
+                            _LOGGER.debug("%s: playlist %s -> %s", self.speaker.display_name, final, line)
+                            return line
+        except (aiohttp.ClientError, TimeoutError, ValueError) as err:
+            _LOGGER.debug("%s: could not pre-resolve %s: %s", self.speaker.display_name, url, err)
+            return url
+        if final != url:
+            _LOGGER.debug("%s: %s redirects to %s", self.speaker.display_name, url, final)
+        return final
+
     async def async_play(self, url: str, title: str, media_type: str | None,
                          metadata: dict[str, Any] | None = None) -> None:
+        url = await self._resolve_stream_url(url)
         try:
             dev = await self._get_device()
             await dev.async_update(do_ping=False)
@@ -111,7 +141,9 @@ class LibratoneDlna:
             await dev.async_play()
         except UpnpError as err:
             self._device = None   # re-read the description next time
-            raise HomeAssistantError(f"DLNA playback on {self.speaker.display_name} failed: {err}") from err
+            raise HomeAssistantError(
+                f"DLNA playback on {self.speaker.display_name} failed for {url}: {err}"
+            ) from err
 
     async def async_control(self, action: str) -> None:
         """play / pause / stop on the renderer (used while DLNA is the active source)."""

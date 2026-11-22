@@ -446,3 +446,25 @@ async def test_name_color_diagnostics_and_device(hass: HomeAssistant, fakes) -> 
     await wait_for(lambda: (dr.CONNECTION_NETWORK_MAC, "c4:67:b5:00:00:00")
                    in dr.async_get(hass).async_get(dev.id).connections)
     assert dr.async_get(hass).async_get(dev.id).configuration_url == "http://127.0.0.2/"
+
+
+async def test_favorite_started_event(hass: HomeAssistant, fakes) -> None:
+    """Heart button on the speaker: it pushes NOTIFY 278 with isFromChannel + slot (real payload shape)."""
+    arwen = await fakes("127.0.0.2", serial=ARWEN, name="Arwen")
+    await setup(hass, entry_for("127.0.0.2", "Arwen", ARWEN))
+    eid = "event.arwen_favorite_started"
+    await wait_for(lambda: hass.states.get(eid) is not None and hass.states.get(eid).state != "unavailable")
+
+    pressed = {"isFromChannel": True, "play_identity": "2", "play_subtitle": "", "play_title": "BBC Radio 4",
+               "play_token": "", "play_type": "channel"}
+    arwen.notify(Cmd.PLAYER, json.dumps(pressed))
+    await wait_for(lambda: hass.states.get(eid).attributes.get("event_type") == "favorite_2")
+    attrs = hass.states.get(eid).attributes
+    assert attrs["name"] == "BBC Radio 4" and attrs["started_by"] == "speaker_or_app"
+
+    # started from Home Assistant: same notification, but marked as ours
+    await hass.services.async_call("media_player", "select_source",
+                                   {"entity_id": "media_player.arwen", "source": "3: Radio Paradise"}, blocking=True)
+    arwen.notify(Cmd.PLAYER, json.dumps(dict(pressed, play_identity="3", play_title="Radio Paradise")))
+    await wait_for(lambda: hass.states.get(eid).attributes.get("event_type") == "favorite_3")
+    assert hass.states.get(eid).attributes["started_by"] == "home_assistant"

@@ -69,6 +69,22 @@
       "muted": {
         "name": "Muted"
       }
+    },
+    "event": {
+      "favorite_started": {
+        "name": "Favorite started",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "favorite_1": "Favorite 1",
+              "favorite_2": "Favorite 2",
+              "favorite_3": "Favorite 3",
+              "favorite_4": "Favorite 4",
+              "favorite_5": "Favorite 5"
+            }
+          }
+        }
+      }
     }
   },
   "services": {

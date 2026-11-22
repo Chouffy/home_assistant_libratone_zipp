@@ -12,6 +12,9 @@ Speakers are identified by **serial number**, not IP: when a speaker comes back 
   They are detected though, see [Sources](#sources).
 * Bluetooth: playback is detected (shown as playing, source "Bluetooth"), whether a phone is *connected* is not.
   Bluetooth has its own volume, which the speaker doesn't report.
+* Favorites stored on the speaker can only be vTuner stations (and Spotify via the app): a stream URL can be
+  saved but the speaker won't play it (tested). Stations from Home Assistant play via DLNA instead, see
+  [Favorites from the heart button](#favorites-from-the-heart-button).
 * Mute is read-only (`binary_sensor.<speaker>_muted`): the speaker mutes itself when its touch panel is held,
   there is no network command to set it.
 * The integration needs UDP ports `7778` and `3333` (the speakers always answer to these) and uses UDP `1800`
@@ -119,7 +122,41 @@ Roadmap (status after v5, 2026-11-21). Open points are free to take: PRs welcome
 * Radio
     * [x] Favorites: play by name, save the playing station (`select.<speaker>_save_playing_station_as_favorite` or `libratone_zipp.save_favorite`)
     * [ ] Save Spotify content as a favorite (the app can; needs a capture)
+    * [x] Notice favorites started with the heart button / app (`event.<speaker>_favorite_started`)
+    * [ ] Any stream as a favorite on the speaker itself: not possible (only vTuner ids play); use the event + an automation
     * [x] Any station: via `play_media` / media browser (e.g. Radio Browser), independent of vTuner/Libratone
+
+## Favorites from the heart button
+
+`event.<speaker>_favorite_started` fires whenever a favorite starts: chosen with the heart button on the
+speaker, in the app, or from Home Assistant. Event types `favorite_1` ... `favorite_5`, with the attributes
+`name` and `started_by` (`speaker_or_app` or `home_assistant`). It fires also for favorites that then fail
+to play (dead vTuner stations).
+
+The integration doesn't act on it. If nobody in the household relies on a slot in the app, an automation can
+put any stream on that slot, e.g. a Radio Browser station that vTuner doesn't have:
+
+```yaml
+automation:
+  - alias: "Arwen: heart slot 1 plays my station"
+    triggers:
+      - trigger: state
+        entity_id: event.arwen_favorite_started
+    conditions:
+      - condition: template
+        value_template: >
+          {{ trigger.to_state.attributes.event_type == 'favorite_1'
+             and trigger.to_state.attributes.started_by == 'speaker_or_app' }}
+    actions:
+      - action: media_player.play_media
+        target:
+          entity_id: media_player.arwen
+        data:
+          media_content_id: "https://example.org/my-station.mp3"
+          media_content_type: music
+          extra:
+            title: "My station"
+```
 
 ## Sources
 

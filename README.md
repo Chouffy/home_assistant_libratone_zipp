@@ -133,6 +133,17 @@ speaker, in the app, or from Home Assistant. Event types `favorite_1` ... `favor
 `name` and `started_by` (`speaker_or_app` or `home_assistant`). It fires also for favorites that then fail
 to play (dead vTuner stations).
 
+Why this exists:
+
+1. **Favorites the speaker can't store.** The speaker only plays vTuner stations as favorites. With this event
+   the heart button can start anything Home Assistant can play (Radio Browser, local media, ...), without
+   reaching for the app or Home Assistant.
+2. **Broken favorites.** The radio stations behind the favorites come from vTuner via Libratone's service, and
+   more and more of them no longer play: on a Zipp with the factory favorites, three of the five are dead. Some
+   years ago Libratone had to ship a firmware update because all stations had stopped working; there's no
+   guarantee that will happen again. The event fires also when a favorite fails, so a dead slot can be given a
+   working stream.
+
 The integration doesn't act on it. If nobody in the household relies on a slot in the app, an automation can
 put any stream on that slot, e.g. a Radio Browser station that vTuner doesn't have:
 

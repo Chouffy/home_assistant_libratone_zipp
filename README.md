@@ -179,6 +179,7 @@ automation:
 | DLNA / media from Home Assistant (Radio Browser, local media, TTS) | tested |
 | AirPlay | not tested yet |
 | AUX in | not tested yet |
+| USB | not tested yet (the app knows USB commands: 1536-1538 `fetchUsbCurrentPlayId` / `PlayMode` / `SongInfo`) |
 | Tidal, Douban FM, Kaishu, Ximalaya, Baidu, Audiogum | reported by the speaker as supported services (cmd 281), not tested |
 
 ## Help wanted: other Libratone speakers

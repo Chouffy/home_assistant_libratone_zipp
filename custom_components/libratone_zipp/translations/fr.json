@@ -1,20 +1,102 @@
 {
   "config": {
+    "flow_title": "{name}",
     "step": {
       "user": {
-        "title": "Ajouter un haut-parleur Libratone Zipp",
-        "description": "Entrez l’adresse IP de votre haut-parleur.",
+        "title": "Ajouter une enceinte Libratone Zipp",
+        "description": "Saisissez l'adresse IP de l'enceinte. Elle ne doit être correcte qu'une fois : ensuite l'enceinte est suivie par son numéro de série, même si son IP change.",
         "data": {
           "host": "Hôte / IP",
-          "name": "Nom (optionnel)"
+          "name": "Nom (facultatif)"
         }
+      },
+      "zeroconf_confirm": {
+        "title": "Enceinte Libratone trouvée",
+        "description": "Ajouter {name} ({host}) ?"
       }
     },
     "error": {
-      "cannot_connect": "Connexion impossible. Vérifiez l’IP et réessayez."
+      "cannot_connect": "L'enceinte ne répond pas. Vérifiez l'IP et que les ports UDP 3333 et 7778 atteignent Home Assistant."
     },
     "abort": {
-      "already_configured": "Ce haut-parleur est déjà configuré."
+      "already_configured": "Cette enceinte est déjà configurée.",
+      "not_libratone": "Ce n'est pas une enceinte Libratone.",
+      "cannot_connect": "L'enceinte ne répond pas."
+    }
+  },
+  "entity": {
+    "select": {
+      "room_placement": {
+        "name": "Emplacement dans la pièce"
+      },
+      "channel": {
+        "name": "Canal audio",
+        "state": {
+          "stereo": "Stéréo (les deux)",
+          "left": "Gauche",
+          "right": "Droite"
+        }
+      },
+      "save_favorite": {
+        "name": "Enregistrer la station en cours comme favori"
+      },
+      "color": {
+        "name": "Couleur"
+      }
+    },
+    "number": {
+      "sleep_timer": {
+        "name": "Minuterie de mise en veille"
+      }
+    },
+    "sensor": {
+      "wifi_signal": {
+        "name": "Signal WiFi"
+      },
+      "wifi_network": {
+        "name": "Réseau WiFi"
+      },
+      "ip_address": {
+        "name": "Adresse IP"
+      }
+    },
+    "text": {
+      "speaker_name": {
+        "name": "Nom de l'enceinte"
+      }
+    },
+    "binary_sensor": {
+      "muted": {
+        "name": "En sourdine"
+      }
+    },
+    "event": {
+      "favorite_started": {
+        "name": "Favori lancé",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "favorite_1": "Favori 1",
+              "favorite_2": "Favori 2",
+              "favorite_3": "Favori 3",
+              "favorite_4": "Favori 4",
+              "favorite_5": "Favori 5"
+            }
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "save_favorite": {
+      "name": "Enregistrer un favori",
+      "description": "Enregistre la station de radio en cours dans l'un des cinq emplacements de favoris de l'enceinte (comme « + » dans l'app Libratone). Fonctionne uniquement pendant la lecture d'une station de radio.",
+      "fields": {
+        "slot": {
+          "name": "Emplacement",
+          "description": "Emplacement de favori 1-5 à remplacer."
+        }
+      }
     }
   }
 }

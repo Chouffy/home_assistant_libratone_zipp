@@ -1,20 +1,102 @@
 {
   "config": {
+    "flow_title": "{name}",
     "step": {
       "user": {
         "title": "Aggiungi altoparlante Libratone Zipp",
-        "description": "Inserisci l’indirizzo IP del tuo altoparlante.",
+        "description": "Inserisci l'indirizzo IP dell'altoparlante. Deve essere corretto solo una volta: in seguito l'altoparlante viene riconosciuto dal numero di serie, anche se l'IP cambia.",
         "data": {
           "host": "Host / IP",
-          "name": "Nome (opzionale)"
+          "name": "Nome (facoltativo)"
         }
+      },
+      "zeroconf_confirm": {
+        "title": "Altoparlante Libratone trovato",
+        "description": "Aggiungere {name} ({host})?"
       }
     },
     "error": {
-      "cannot_connect": "Impossibile connettersi. Controlla l’IP e riprova."
+      "cannot_connect": "L'altoparlante non risponde. Controlla l'IP e che le porte UDP 3333 e 7778 raggiungano Home Assistant."
     },
     "abort": {
-      "already_configured": "Questo altoparlante è già configurato."
+      "already_configured": "Questo altoparlante è già configurato.",
+      "not_libratone": "Non è un altoparlante Libratone.",
+      "cannot_connect": "L'altoparlante non risponde."
+    }
+  },
+  "entity": {
+    "select": {
+      "room_placement": {
+        "name": "Posizione nella stanza"
+      },
+      "channel": {
+        "name": "Canale audio",
+        "state": {
+          "stereo": "Stereo (entrambi)",
+          "left": "Sinistro",
+          "right": "Destro"
+        }
+      },
+      "save_favorite": {
+        "name": "Salva la stazione in riproduzione come preferito"
+      },
+      "color": {
+        "name": "Colore"
+      }
+    },
+    "number": {
+      "sleep_timer": {
+        "name": "Timer di spegnimento"
+      }
+    },
+    "sensor": {
+      "wifi_signal": {
+        "name": "Segnale WiFi"
+      },
+      "wifi_network": {
+        "name": "Rete WiFi"
+      },
+      "ip_address": {
+        "name": "Indirizzo IP"
+      }
+    },
+    "text": {
+      "speaker_name": {
+        "name": "Nome dell'altoparlante"
+      }
+    },
+    "binary_sensor": {
+      "muted": {
+        "name": "Silenziato"
+      }
+    },
+    "event": {
+      "favorite_started": {
+        "name": "Preferito avviato",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "favorite_1": "Preferito 1",
+              "favorite_2": "Preferito 2",
+              "favorite_3": "Preferito 3",
+              "favorite_4": "Preferito 4",
+              "favorite_5": "Preferito 5"
+            }
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "save_favorite": {
+      "name": "Salva preferito",
+      "description": "Salva la stazione radio in riproduzione in una delle cinque posizioni preferite dell'altoparlante (come '+' nell'app Libratone). Funziona solo durante la riproduzione di una stazione radio.",
+      "fields": {
+        "slot": {
+          "name": "Posizione",
+          "description": "Posizione preferita 1-5 da sovrascrivere."
+        }
+      }
     }
   }
 }

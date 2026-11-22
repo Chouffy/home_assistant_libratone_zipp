@@ -100,7 +100,12 @@ class LibratoneDlna:
                 meta_data=metadata or {},
             )
             if dev.can_stop:
-                await dev.async_stop()
+                try:
+                    await dev.async_stop()
+                except UpnpError as err:
+                    # The Libratone renderer may claim it can stop and then refuse with 701
+                    # ("Transition to STOP not allowed"), e.g. while another source is active. Harmless.
+                    _LOGGER.debug("%s: ignoring refused Stop before playback: %s", self.speaker.display_name, err)
             await dev.async_set_transport_uri(url, title, didl)
             await dev.async_wait_for_can_play()
             await dev.async_play()

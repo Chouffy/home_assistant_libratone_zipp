@@ -225,6 +225,7 @@ class LibratoneMediaPlayer(LibratoneEntity, MediaPlayerEntity, RestoreEntity):
         image = extra.get("thumb") or metadata.get("image_url")
         await target.dlna.async_play(media_id, title, media_type, metadata)
         target.dlna_media = {"title": title, "image": image, "artist": metadata.get("artist")}
+        target.notify()   # the mode change may already have been reported while playback started
         self._hub.schedule_refresh(target)
 
     async def async_browse_media(self, media_content_type: str | None = None,

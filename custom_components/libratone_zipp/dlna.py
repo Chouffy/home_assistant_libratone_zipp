@@ -20,6 +20,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
+from .stream_proxy import async_proxy_url
+
 if TYPE_CHECKING:
     from python_libratone_zipp import LibratoneSpeaker
 
@@ -89,11 +91,11 @@ class LibratoneDlna:
                 types.add(fmt.lower().replace("/x-", "/", 1).partition(";")[0])
         return types or None
 
-    async def _resolve_stream_url(self, url: str) -> str:
+    async def _resolve_stream_url(self, url: str) -> tuple[str, str | None]:
         """The renderer doesn't follow HTTP redirects or read playlists (UPnP error 716 'resource not found').
         Follow redirects here and take the first stream from an .m3u/.pls playlist."""
         if not url.startswith(("http://", "https://")):
-            return url
+            return url, None
         session = async_get_clientsession(self.hass)
         try:
             async with session.get(url, allow_redirects=True, timeout=aiohttp.ClientTimeout(total=8)) as resp:
@@ -109,17 +111,20 @@ class LibratoneDlna:
                             line = line.split("=", 1)[1].strip()
                         if line.startswith(("http://", "https://")):
                             _LOGGER.debug("%s: playlist %s -> %s", self.speaker.display_name, final, line)
-                            return line
+                            return await self._resolve_stream_url(line)
         except (aiohttp.ClientError, TimeoutError, ValueError) as err:
             _LOGGER.debug("%s: could not pre-resolve %s: %s", self.speaker.display_name, url, err)
-            return url
+            return url, None
         if final != url:
             _LOGGER.debug("%s: %s redirects to %s", self.speaker.display_name, url, final)
-        return final
+        return final, (ctype.split(";")[0].strip() or None)
 
     async def async_play(self, url: str, title: str, media_type: str | None,
                          metadata: dict[str, Any] | None = None) -> None:
-        url = await self._resolve_stream_url(url)
+        url, content_type = await self._resolve_stream_url(url)
+        if url.startswith("https://"):
+            # the speaker's firmware can't open current https servers: relay through Home Assistant
+            url = async_proxy_url(self.hass, url)
         try:
             dev = await self._get_device()
             await dev.async_update(do_ping=False)
@@ -127,6 +132,7 @@ class LibratoneDlna:
                 media_url=url,
                 media_title=title,
                 override_upnp_class=UPNP_CLASS.get((media_type or "").lower()),
+                default_mime_type=content_type,
                 meta_data=metadata or {},
             )
             if dev.can_stop:

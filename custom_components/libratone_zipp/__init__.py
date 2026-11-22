@@ -81,6 +81,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: LibratoneConfigEntry) ->
     )
     entry.runtime_data = spk
     from .dlna import LibratoneDlna   # HA-side helper; speaker.py stays HA-free
+    from .stream_proxy import async_register as register_stream_proxy
+
+    register_stream_proxy(hass)
     spk.dlna = LibratoneDlna(hass, spk)
 
     async def _fetch_model() -> None:

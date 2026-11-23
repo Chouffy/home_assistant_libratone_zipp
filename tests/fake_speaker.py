@@ -1,7 +1,7 @@
 """A fake Libratone speaker on a loopback address (127.0.0.x), speaking the real protocol.
 
 Replies to GETs on 7777 by sending to <controller>:7778, and can push notifications
-to <controller>:3333, mirroring what the real speakers do (see libratone-sniffing).
+to <controller>:3333, mirroring what the real speakers do (values from packet captures).
 """
 from __future__ import annotations
 
@@ -40,6 +40,11 @@ class _Proto(asyncio.DatagramProtocol):
         self.fake._on_packet(data, addr[0])
 
 
+# loopback addresses of running fakes; the hub's LSSDP search goes only here in tests (never a real broadcast)
+SEARCH_TARGETS: list[str] = []
+NOTIFY_INTERVAL = 0.5   # real speakers: ~10 s
+
+
 class _LssdpProto(asyncio.DatagramProtocol):
     def __init__(self, fake: "FakeSpeaker") -> None:
         self.fake = fake
@@ -59,8 +64,8 @@ class FakeSpeaker:
             Cmd.CHARGING: "2", Cmd.SIGNAL: "-89,-34,5/5", Cmd.MUTE: "UNMUTE", Cmd.COLOR: "2002",
             Cmd.SOURCE_STATE: bytes.fromhex("340c00f3040000"),
             Cmd.TIMER: b"\xff" * 5,
-            Cmd.SSID: '"FRITZ!Box 7272"',
-            Cmd.PRIVATE_MODE: "0",                      # touch-panel mute   # real values: see findings/2026-11-20_sources
+            Cmd.SSID: '"Your-WiFi-SSID"',
+            Cmd.PRIVATE_MODE: "0",                      # touch-panel mute
         }
         self.received: list[p.Frame] = []
         self.ip: str | None = None
@@ -73,6 +78,9 @@ class FakeSpeaker:
         self.channel = "S"           # LSSDP letter: S stereo / L left / R right
         self.zone = ""
         self.lssdp_queries = 0
+        self.lssdp_enabled = True       # False: silent on LSSDP (like a network that drops broadcasts)
+        self.mac = "c467b50000" + serial[-2:]   # vendor prefix + fake device part
+        self._notify_task: asyncio.Task | None = None
 
     async def start(self, ip: str) -> "FakeSpeaker":
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -80,12 +88,36 @@ class FakeSpeaker:
         loop = asyncio.get_running_loop()
         self._transport, _ = await loop.create_datagram_endpoint(lambda: _Proto(self), sock=sock)
         lsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        lsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)   # the hub listens on 0.0.0.0:1800
         lsock.bind((ip, p.PORT_LSSDP))
         self._lssdp, _ = await loop.create_datagram_endpoint(lambda: _LssdpProto(self), sock=lsock)
         self.ip = ip
+        SEARCH_TARGETS.append(ip)
+        self._notify_task = loop.create_task(self._announce())
         return self
 
+    def _lssdp_text(self, first_line: str) -> str:
+        return (
+            f"{first_line}\r\nHOST: 239.255.255.250:1800\r\nPROTOCOL: Version 1.0\r\n"
+            f"DeviceName: {self.name}_{self.serial}\r\nDeviceID: {self.mac}\r\n"
+            f"DeviceState: {self.lssdp_state},{self.channel},{self._playing_letter()}\r\nPORT: 7777\r\n"
+            f"ZoneID: {self.zone}\r\nCreator: \r\nIPAddr: {self.ip}\r\nStereoPairID: \r\n"
+        )
+
+    async def _announce(self) -> None:
+        """Like the real speakers' periodic LSSDP broadcast (to the hub's 0.0.0.0:1800 on loopback)."""
+        while True:
+            await asyncio.sleep(NOTIFY_INTERVAL)
+            if self._lssdp and self.lssdp_enabled:
+                text = self._lssdp_text("NOTIFY * HTTP/1.1").replace("PROTOCOL", "NTS: ssdp-alive\r\nPROTOCOL", 1)
+                self._lssdp.sendto(text.encode(), ("127.0.0.1", p.PORT_LSSDP))
+
     def stop(self) -> None:
+        if self._notify_task:
+            self._notify_task.cancel()
+            self._notify_task = None
+        if self.ip in SEARCH_TARGETS:
+            SEARCH_TARGETS.remove(self.ip)
         for t in (self._transport, self._lssdp):
             if t:
                 t.close()
@@ -102,15 +134,10 @@ class FakeSpeaker:
         self.zone = f"LINK {link_id}" if link_id else ""
 
     def _on_msearch(self, data: bytes, src: str) -> None:
-        if not data.startswith(b"M-SEARCH") or not self._lssdp:
+        if not data.startswith(b"M-SEARCH") or not self._lssdp or not self.lssdp_enabled:
             return
         self.lssdp_queries += 1
-        reply = (
-            "HTTP/1.1 200 OK\r\nHOST: 239.255.255.250:1800\r\nPROTOCOL: Version 1.0\r\n"
-            f"DeviceName: {self.name}_{self.serial}\r\nDeviceID: c467b5000000\r\n"
-            f"DeviceState: {self.lssdp_state},{self.channel},{self._playing_letter()}\r\nPORT: 7777\r\nZoneID: {self.zone}\r\n"
-            f"Creator: \r\nIPAddr: {self.ip}\r\nStereoPairID: \r\n"
-        )
+        reply = self._lssdp_text("HTTP/1.1 200 OK")
         # like the real speakers: reply goes to the searcher's port 7778, from another socket
         self._lssdp.sendto(reply.encode(), (src, p.PORT_RESULT))
 
@@ -155,7 +182,7 @@ class FakeSpeaker:
             elif frame.cmd == Cmd.TIMER and frame.text == "F0":
                 self.values[Cmd.TIMER] = b"\xff" * 5
             elif frame.cmd == Cmd.TIMER and frame.text.startswith("2"):
-                # real format (verified on Arwen): '2' + remaining seconds uint16 little-endian + 2 zero bytes
+                # real format (verified on a Zipp): '2' + remaining seconds uint16 little-endian + 2 zero bytes
                 self.values[Cmd.TIMER] = b"2" + int(frame.text[1:]).to_bytes(2, "little") + b"\x00\x00"
             elif frame.cmd == Cmd.CHANNEL:
                 self.channel = {"0": "S", "1": "L", "2": "R"}[frame.text]

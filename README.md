@@ -126,6 +126,23 @@ Roadmap (status after v5, 2026-11-21). Open points are free to take: PRs welcome
     * [ ] Any stream as a favorite on the speaker itself: not possible (only vTuner ids play); use the event + an automation
     * [x] Any station: via `play_media` / media browser (e.g. Radio Browser), independent of vTuner/Libratone
 
+## When a speaker gets a new IP address
+
+Speakers are identified by serial number, not IP. When a speaker comes back with a new address (sleep,
+power off, new DHCP lease), Home Assistant finds it again by itself, without scanning the network:
+
+* **DHCP discovery**: Home Assistant notices the speaker requesting an address (Libratone MAC prefix `C4:67:B5`).
+* **LSSDP**: every speaker, also a group slave, announces itself on UDP port 1800 about every 10 s. The integration
+  listens, and while a speaker is missing it sends one search request (a single broadcast, like the Libratone app).
+* **Zeroconf** (AirPlay announcement), as before.
+
+**Optional: active search (UDP sweep), off by default.** If none of the above reaches Home Assistant, typically
+**Home Assistant in Docker without host networking** (broadcasts and DHCP traffic don't reach the container), you
+can turn on *Actively search the network if the speaker can't be found* under *Configure* on the speaker. While the
+speaker is missing, the integration then sends a small query (2 UDP packets of ~10 bytes) to every address of the
+speaker's /24 network on port 7777, once a minute (every 5 minutes after 10 minutes). Only Libratone speakers
+answer. It is not a port scan, but network monitoring may still see it as a scan, which is why it's opt-in.
+
 ## Favorites from the heart button
 
 `event.<speaker>_favorite_started` fires whenever a favorite starts: chosen with the heart button on the
@@ -149,10 +166,10 @@ put any stream on that slot, e.g. a Radio Browser station that vTuner doesn't ha
 
 ```yaml
 automation:
-  - alias: "Arwen: heart slot 1 plays my station"
+  - alias: "Zipp2: heart slot 1 plays my station"
     triggers:
       - trigger: state
-        entity_id: event.arwen_favorite_started
+        entity_id: event.zipp2_favorite_started
     conditions:
       - condition: template
         value_template: >
@@ -161,7 +178,7 @@ automation:
     actions:
       - action: media_player.play_media
         target:
-          entity_id: media_player.arwen
+          entity_id: media_player.zipp2
         data:
           media_content_id: "https://example.org/my-station.mp3"
           media_content_type: music

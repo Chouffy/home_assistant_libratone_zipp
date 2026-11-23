@@ -10,12 +10,12 @@ from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
-from .const import CONF_SERIAL, DOMAIN, PLATFORMS
+from .const import CONF_MAC, CONF_REDISCOVER, CONF_SERIAL, DOMAIN, PLATFORMS
 from python_libratone_zipp import LibratoneHub, LibratoneSpeaker
 
 _LOGGER = logging.getLogger(__name__)
 
-IDENTIFY_TIMEOUT = 6.0
+IDENTIFY_TIMEOUT = 12.0   # long enough for one round of the speakers' LSSDP announcements (~10 s)
 
 type LibratoneConfigEntry = ConfigEntry[LibratoneSpeaker]
 
@@ -47,13 +47,16 @@ def entity_unique_id(serial: str) -> str:
 
 
 async def _identify(hub: LibratoneHub, spk: LibratoneSpeaker) -> None:
-    """Make sure spk has a serial: probe its configured host, else scan for it by name."""
+    """Make sure spk has a serial: probe its configured host, else look for it by name via LSSDP
+    (search request + the speakers' own announcements), plus the subnet sweep if enabled."""
     if spk.serial:
         return
     if await hub.probe(spk.host, timeout=3.0):
         return  # handle_frame stored the serial
-    _LOGGER.info("%s not answering at %s, scanning the network for it", spk.display_name, spk.host)
-    await hub.scan()
+    _LOGGER.info("%s not answering at %s, looking for it on the network", spk.display_name, spk.host)
+    hub.search()
+    if spk.rediscover:
+        await hub.scan()
     loop = asyncio.get_running_loop()
     end = loop.time() + IDENTIFY_TIMEOUT
     while spk.serial is None and loop.time() < end:
@@ -78,6 +81,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: LibratoneConfigEntry) ->
     spk = hub.add_speaker(
         entry.data[CONF_HOST], serial, entry.title or entry.data.get(CONF_NAME),
         aliases=tuple(n for n in (entry.data.get(CONF_NAME),) if n),
+        rediscover=entry.options.get(CONF_REDISCOVER, False),
     )
     entry.runtime_data = spk
     from .dlna import LibratoneDlna   # HA-side helper; speaker.py stays HA-free
@@ -108,6 +112,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: LibratoneConfigEntry) ->
         """Persist host changes; finish the serial migration once a legacy speaker shows up."""
         if spk.host and spk.host != entry.data[CONF_HOST]:
             hass.config_entries.async_update_entry(entry, data={**entry.data, CONF_HOST: spk.host})
+        if spk.mac and spk.mac != entry.data.get(CONF_MAC):
+            # remembered so DHCP discovery can recognise the speaker at a new address
+            hass.config_entries.async_update_entry(entry, data={**entry.data, CONF_MAC: spk.mac})
         if spk.serial and not entry.data.get(CONF_SERIAL):
             _migrate_to_serial(hass, entry, spk)
             hass.config_entries.async_schedule_reload(entry.entry_id)

@@ -98,5 +98,16 @@
         }
       }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options de l'enceinte",
+        "description": "Une enceinte qui reçoit une nouvelle adresse IP est normalement retrouvée automatiquement (DHCP, ses propres annonces réseau, zeroconf). Seulement si cela ne fonctionne pas dans votre installation, par ex. Home Assistant dans Docker sans réseau hôte, activez la recherche active : tant que l'enceinte est introuvable, une petite requête est envoyée à chaque adresse de son réseau.",
+        "data": {
+          "rediscover": "Rechercher activement sur le réseau si l'enceinte est introuvable (balayage UDP)"
+        }
+      }
+    }
   }
 }

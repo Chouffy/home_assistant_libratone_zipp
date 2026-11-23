@@ -1,17 +1,37 @@
 {
   "domain": "libratone_zipp",
   "name": "Libratone Zipp",
-  "codeowners": ["@chouffy", "@Calyorbro"],
+  "codeowners": [
+    "@chouffy",
+    "@Calyorbro"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/Chouffy/home_assistant_libratone_zipp",
   "integration_type": "device",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/Chouffy/home_assistant_libratone_zipp/issues",
-  "requirements": ["python_libratone_zipp==5.0.0", "async-upnp-client==0.48.2"],
-  "dependencies": ["http"],
-  "after_dependencies": ["media_source"],
+  "requirements": [
+    "python_libratone_zipp==5.0.0",
+    "async-upnp-client==0.48.2"
+  ],
+  "dependencies": [
+    "http"
+  ],
+  "after_dependencies": [
+    "media_source"
+  ],
   "version": "5.0.0",
   "zeroconf": [
-    { "type": "_airplay._tcp.local.", "properties": { "manufacturer": "libratone*" } }
+    {
+      "type": "_airplay._tcp.local.",
+      "properties": {
+        "manufacturer": "libratone*"
+      }
+    }
+  ],
+  "dhcp": [
+    {
+      "macaddress": "C467B5*"
+    }
   ]
 }

@@ -7,6 +7,7 @@ import pytest_socket
 from python_libratone_zipp import hub as hub_mod, speaker as speaker_mod
 import custom_components.libratone_zipp as integration
 
+from . import fake_speaker
 from .fake_speaker import FakeSpeaker
 
 
@@ -29,6 +30,9 @@ def fast_timings(monkeypatch):
     monkeypatch.setattr(hub_mod, "SCAN_INTERVAL", 0.5)
     monkeypatch.setattr(speaker_mod, "AVAILABLE_TIMEOUT", 1.5)
     monkeypatch.setattr(integration, "IDENTIFY_TIMEOUT", 3.0)
+    # LSSDP search requests only to the fakes on loopback, never a real broadcast into the LAN
+    fake_speaker.SEARCH_TARGETS.clear()
+    monkeypatch.setattr(hub_mod, "SEARCH_TARGETS", fake_speaker.SEARCH_TARGETS)
 
 
 @pytest.fixture

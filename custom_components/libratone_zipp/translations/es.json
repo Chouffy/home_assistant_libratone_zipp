@@ -98,5 +98,16 @@
         }
       }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opciones del altavoz",
+        "description": "Un altavoz que recibe una nueva dirección IP normalmente se vuelve a encontrar de forma automática (DHCP, sus propios anuncios en la red, zeroconf). Solo si eso no funciona en tu instalación, p. ej. Home Assistant en Docker sin red de host, activa la búsqueda activa: mientras falte el altavoz, se envía una pequeña consulta a cada dirección de su red.",
+        "data": {
+          "rediscover": "Buscar activamente en la red si no se encuentra el altavoz (barrido UDP)"
+        }
+      }
+    }
   }
 }

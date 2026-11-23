@@ -98,5 +98,16 @@
         }
       }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Lautsprecher-Optionen",
+        "description": "Ein Lautsprecher mit neuer IP-Adresse wird normalerweise automatisch wiedergefunden (DHCP, eigene Netzwerk-Ankündigungen, Zeroconf). Nur wenn das in deiner Umgebung nicht klappt, z. B. Home Assistant in Docker ohne Host-Netzwerk, schalte die aktive Suche ein: Dann wird, solange der Lautsprecher fehlt, eine kleine Anfrage an jede Adresse im Netz des Lautsprechers geschickt.",
+        "data": {
+          "rediscover": "Netzwerk aktiv durchsuchen, wenn der Lautsprecher nicht gefunden wird (UDP-Suche)"
+        }
+      }
+    }
   }
 }

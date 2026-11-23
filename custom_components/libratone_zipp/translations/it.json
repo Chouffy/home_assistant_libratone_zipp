@@ -98,5 +98,16 @@
         }
       }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opzioni dell'altoparlante",
+        "description": "Un altoparlante che riceve un nuovo indirizzo IP viene normalmente ritrovato in automatico (DHCP, i suoi annunci di rete, zeroconf). Solo se questo non funziona nella tua installazione, ad es. Home Assistant in Docker senza rete host, attiva la ricerca attiva: finché l'altoparlante manca, viene inviata una piccola richiesta a ogni indirizzo della sua rete.",
+        "data": {
+          "rediscover": "Cerca attivamente nella rete se l'altoparlante non viene trovato (scansione UDP)"
+        }
+      }
+    }
   }
 }

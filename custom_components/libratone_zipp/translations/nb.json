@@ -98,5 +98,16 @@
         }
       }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Høyttalervalg",
+        "description": "En høyttaler som får en ny IP-adresse, blir normalt funnet igjen automatisk (DHCP, egne nettverkskunngjøringer, zeroconf). Bare hvis det ikke fungerer i oppsettet ditt, f.eks. Home Assistant i Docker uten vertsnettverk, slår du på aktivt søk: Så lenge høyttaleren mangler, sendes en liten forespørsel til hver adresse i nettverket.",
+        "data": {
+          "rediscover": "Søk aktivt i nettverket hvis høyttaleren ikke blir funnet (UDP-søk)"
+        }
+      }
+    }
   }
 }

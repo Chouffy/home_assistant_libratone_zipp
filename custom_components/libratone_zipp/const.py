@@ -12,13 +12,15 @@ PLATFORMS: list[Platform] = [
 ]
 
 CONF_SERIAL = "serial"
+CONF_REDISCOVER = "rediscover"   # option: sweep the subnet for a speaker whose IP changed (off)
+CONF_MAC = "mac"
 MANUFACTURER = "Libratone"
 
 # UPnP modelName + modelNumber -> product name. Only LTH300 is confirmed; please report others.
 MODELS = {"LTH300": "Zipp"}
 
-# Color codes (GET 770 / SET 771) -> (name as in the app, hex). Codes mapped on a Zipp with
-# libratone-sniffing/weekend/color_map.py (2026-11-21); hex from libratone.com's color swatches.
+# Color codes (GET 770 / SET 771) -> (name as in the app, hex). Codes mapped on a Zipp by setting each color
+# in the app and reading GET 770; hex from libratone.com's color swatches.
 # 1xxx are the wool covers, 2xxx the mesh covers. Pepper Black, Salty Grey and Signal aren't on the website:
 # their hex values are approximations.
 COLORS: dict[str, tuple[str, str]] = {

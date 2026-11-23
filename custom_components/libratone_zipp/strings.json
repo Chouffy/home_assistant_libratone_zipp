@@ -98,5 +98,16 @@
         }
       }
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Speaker options",
+        "description": "A speaker that gets a new IP address is normally found again automatically (DHCP, its own network announcements, zeroconf). Only if that doesn't work in your setup, e.g. Home Assistant in Docker without host networking, turn on the active search: it then sends a small query to every address in the speaker's network while the speaker is missing.",
+        "data": {
+          "rediscover": "Actively search the network if the speaker can't be found (UDP sweep)"
+        }
+      }
+    }
   }
 }

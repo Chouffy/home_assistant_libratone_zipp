@@ -1,20 +1,113 @@
 {
   "config": {
+    "flow_title": "{name}",
     "step": {
       "user": {
         "title": "Add Libratone Zipp speaker",
-        "description": "Enter the IP address of your speaker.",
+        "description": "Enter the IP address of your speaker. It only needs to be right once: the speaker is tracked by serial number afterwards, even if its IP changes.",
         "data": {
           "host": "Host / IP",
           "name": "Name (optional)"
         }
+      },
+      "zeroconf_confirm": {
+        "title": "Libratone speaker found",
+        "description": "Add {name} ({host})?"
       }
     },
     "error": {
-      "cannot_connect": "Can't connect. Check the IP and try again."
+      "cannot_connect": "The speaker did not answer. Check the IP, and that UDP ports 3333 and 7778 reach Home Assistant."
     },
     "abort": {
-      "already_configured": "This speaker is already configured."
+      "already_configured": "This speaker is already configured.",
+      "not_libratone": "Not a Libratone speaker.",
+      "cannot_connect": "The speaker did not answer."
+    }
+  },
+  "entity": {
+    "select": {
+      "room_placement": {
+        "name": "Room placement"
+      },
+      "channel": {
+        "name": "Audio channel",
+        "state": {
+          "stereo": "Stereo (both)",
+          "left": "Left",
+          "right": "Right"
+        }
+      },
+      "save_favorite": {
+        "name": "Save playing station as favorite"
+      },
+      "color": {
+        "name": "Color"
+      }
+    },
+    "number": {
+      "sleep_timer": {
+        "name": "Sleep timer"
+      }
+    },
+    "sensor": {
+      "wifi_signal": {
+        "name": "WiFi signal"
+      },
+      "wifi_network": {
+        "name": "WiFi network"
+      },
+      "ip_address": {
+        "name": "IP address"
+      }
+    },
+    "text": {
+      "speaker_name": {
+        "name": "Speaker name"
+      }
+    },
+    "binary_sensor": {
+      "muted": {
+        "name": "Muted"
+      }
+    },
+    "event": {
+      "favorite_started": {
+        "name": "Favorite started",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "favorite_1": "Favorite 1",
+              "favorite_2": "Favorite 2",
+              "favorite_3": "Favorite 3",
+              "favorite_4": "Favorite 4",
+              "favorite_5": "Favorite 5"
+            }
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "save_favorite": {
+      "name": "Save favorite",
+      "description": "Saves the radio station that is playing now into one of the speaker's five favorite slots (like '+' in the Libratone app). Only works while a radio station plays.",
+      "fields": {
+        "slot": {
+          "name": "Slot",
+          "description": "Favorite slot 1-5 to overwrite."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Speaker options",
+        "description": "A speaker that gets a new IP address is normally found again automatically (DHCP, its own network announcements, zeroconf). Only if that doesn't work in your setup, e.g. Home Assistant in Docker without host networking, turn on the active search: it then sends a small query to every address in the speaker's network while the speaker is missing.",
+        "data": {
+          "rediscover": "Actively search the network if the speaker can't be found (UDP sweep)"
+        }
+      }
     }
   }
 }

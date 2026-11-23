@@ -1,20 +1,113 @@
 {
   "config": {
+    "flow_title": "{name}",
     "step": {
       "user": {
-        "title": "Agregar altavoz Libratone Zipp",
-        "description": "Introduce la dirección IP de tu altavoz.",
+        "title": "Añadir altavoz Libratone Zipp",
+        "description": "Introduce la dirección IP del altavoz. Solo tiene que ser correcta una vez: después el altavoz se identifica por su número de serie, aunque cambie su IP.",
         "data": {
           "host": "Host / IP",
           "name": "Nombre (opcional)"
         }
+      },
+      "zeroconf_confirm": {
+        "title": "Altavoz Libratone encontrado",
+        "description": "¿Añadir {name} ({host})?"
       }
     },
     "error": {
-      "cannot_connect": "No se puede conectar. Comprueba la IP e inténtalo de nuevo."
+      "cannot_connect": "El altavoz no responde. Comprueba la IP y que los puertos UDP 3333 y 7778 lleguen a Home Assistant."
     },
     "abort": {
-      "already_configured": "Este altavoz ya está configurado."
+      "already_configured": "Este altavoz ya está configurado.",
+      "not_libratone": "No es un altavoz Libratone.",
+      "cannot_connect": "El altavoz no responde."
+    }
+  },
+  "entity": {
+    "select": {
+      "room_placement": {
+        "name": "Ubicación en la habitación"
+      },
+      "channel": {
+        "name": "Canal de audio",
+        "state": {
+          "stereo": "Estéreo (ambos)",
+          "left": "Izquierdo",
+          "right": "Derecho"
+        }
+      },
+      "save_favorite": {
+        "name": "Guardar emisora actual como favorito"
+      },
+      "color": {
+        "name": "Color"
+      }
+    },
+    "number": {
+      "sleep_timer": {
+        "name": "Temporizador de apagado"
+      }
+    },
+    "sensor": {
+      "wifi_signal": {
+        "name": "Señal WiFi"
+      },
+      "wifi_network": {
+        "name": "Red WiFi"
+      },
+      "ip_address": {
+        "name": "Dirección IP"
+      }
+    },
+    "text": {
+      "speaker_name": {
+        "name": "Nombre del altavoz"
+      }
+    },
+    "binary_sensor": {
+      "muted": {
+        "name": "Silenciado"
+      }
+    },
+    "event": {
+      "favorite_started": {
+        "name": "Favorito iniciado",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "favorite_1": "Favorito 1",
+              "favorite_2": "Favorito 2",
+              "favorite_3": "Favorito 3",
+              "favorite_4": "Favorito 4",
+              "favorite_5": "Favorito 5"
+            }
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "save_favorite": {
+      "name": "Guardar favorito",
+      "description": "Guarda la emisora de radio que suena ahora en una de las cinco posiciones de favoritos del altavoz (como '+' en la app de Libratone). Solo funciona mientras suena una emisora de radio.",
+      "fields": {
+        "slot": {
+          "name": "Posición",
+          "description": "Posición de favorito 1-5 que se sobrescribe."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opciones del altavoz",
+        "description": "Un altavoz que recibe una nueva dirección IP normalmente se vuelve a encontrar de forma automática (DHCP, sus propios anuncios en la red, zeroconf). Solo si eso no funciona en tu instalación, p. ej. Home Assistant en Docker sin red de host, activa la búsqueda activa: mientras falte el altavoz, se envía una pequeña consulta a cada dirección de su red.",
+        "data": {
+          "rediscover": "Buscar activamente en la red si no se encuentra el altavoz (barrido UDP)"
+        }
+      }
     }
   }
 }

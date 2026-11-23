@@ -1,21 +1,113 @@
 {
   "config": {
+    "flow_title": "{name}",
     "step": {
       "user": {
         "title": "Libratone Zipp-Lautsprecher hinzufügen",
-        "description": "Geben Sie die IP-Adresse Ihres Lautsprechers ein.",
+        "description": "Gib die IP-Adresse des Lautsprechers ein. Sie muss nur einmal stimmen: Danach wird der Lautsprecher über die Seriennummer verfolgt, auch wenn sich die IP ändert.",
         "data": {
           "host": "Host / IP",
           "name": "Name (optional)"
         }
+      },
+      "zeroconf_confirm": {
+        "title": "Libratone-Lautsprecher gefunden",
+        "description": "{name} ({host}) hinzufügen?"
       }
     },
     "error": {
-      "cannot_connect": "Verbindung fehlgeschlagen. Überprüfen Sie die IP und versuchen Sie es erneut."
+      "cannot_connect": "Der Lautsprecher antwortet nicht. Prüfe die IP und ob die UDP-Ports 3333 und 7778 Home Assistant erreichen."
     },
     "abort": {
-      "already_configured": "Dieser Lautsprecher ist bereits konfiguriert."
+      "already_configured": "Dieser Lautsprecher ist bereits konfiguriert.",
+      "not_libratone": "Kein Libratone-Lautsprecher.",
+      "cannot_connect": "Der Lautsprecher antwortet nicht."
+    }
+  },
+  "entity": {
+    "select": {
+      "room_placement": {
+        "name": "Raumposition"
+      },
+      "channel": {
+        "name": "Audiokanal",
+        "state": {
+          "stereo": "Stereo (beide)",
+          "left": "Links",
+          "right": "Rechts"
+        }
+      },
+      "save_favorite": {
+        "name": "Laufenden Sender als Favorit speichern"
+      },
+      "color": {
+        "name": "Farbe"
+      }
+    },
+    "number": {
+      "sleep_timer": {
+        "name": "Schlaf-Timer"
+      }
+    },
+    "sensor": {
+      "wifi_signal": {
+        "name": "WLAN-Signal"
+      },
+      "wifi_network": {
+        "name": "WLAN-Netz"
+      },
+      "ip_address": {
+        "name": "IP-Adresse"
+      }
+    },
+    "text": {
+      "speaker_name": {
+        "name": "Lautsprechername"
+      }
+    },
+    "binary_sensor": {
+      "muted": {
+        "name": "Stummgeschaltet"
+      }
+    },
+    "event": {
+      "favorite_started": {
+        "name": "Favorit gestartet",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "favorite_1": "Favorit 1",
+              "favorite_2": "Favorit 2",
+              "favorite_3": "Favorit 3",
+              "favorite_4": "Favorit 4",
+              "favorite_5": "Favorit 5"
+            }
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "save_favorite": {
+      "name": "Favorit speichern",
+      "description": "Speichert den gerade laufenden Radiosender in einem der fünf Favoritenplätze des Lautsprechers (wie '+' in der Libratone-App). Funktioniert nur, während ein Radiosender läuft.",
+      "fields": {
+        "slot": {
+          "name": "Platz",
+          "description": "Favoritenplatz 1-5, der überschrieben wird."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Lautsprecher-Optionen",
+        "description": "Ein Lautsprecher mit neuer IP-Adresse wird normalerweise automatisch wiedergefunden (DHCP, eigene Netzwerk-Ankündigungen, Zeroconf). Nur wenn das in deiner Umgebung nicht klappt, z. B. Home Assistant in Docker ohne Host-Netzwerk, schalte die aktive Suche ein: Dann wird, solange der Lautsprecher fehlt, eine kleine Anfrage an jede Adresse im Netz des Lautsprechers geschickt.",
+        "data": {
+          "rediscover": "Netzwerk aktiv durchsuchen, wenn der Lautsprecher nicht gefunden wird (UDP-Suche)"
+        }
+      }
     }
   }
 }
-

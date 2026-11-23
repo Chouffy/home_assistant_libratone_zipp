@@ -1,0 +1,14 @@
+save_favorite:
+  target:
+    entity:
+      integration: libratone_zipp
+      domain: media_player
+  fields:
+    slot:
+      required: true
+      example: 1
+      selector:
+        number:
+          min: 1
+          max: 5
+          mode: box

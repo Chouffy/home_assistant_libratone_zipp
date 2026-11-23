@@ -1,20 +1,113 @@
 {
   "config": {
+    "flow_title": "{name}",
     "step": {
       "user": {
         "title": "Legg til Libratone Zipp-høyttaler",
-        "description": "Skriv inn IP-adressen til høyttaleren din.",
+        "description": "Skriv inn IP-adressen til høyttaleren. Den må bare stemme én gang: etterpå følges høyttaleren via serienummeret, selv om IP-adressen endres.",
         "data": {
           "host": "Vert / IP",
           "name": "Navn (valgfritt)"
         }
+      },
+      "zeroconf_confirm": {
+        "title": "Libratone-høyttaler funnet",
+        "description": "Legg til {name} ({host})?"
       }
     },
     "error": {
-      "cannot_connect": "Kan ikke koble til. Kontroller IP-en og prøv igjen."
+      "cannot_connect": "Høyttaleren svarer ikke. Sjekk IP-adressen, og at UDP-portene 3333 og 7778 når Home Assistant."
     },
     "abort": {
-      "already_configured": "Denne høyttaleren er allerede konfigurert."
+      "already_configured": "Denne høyttaleren er allerede konfigurert.",
+      "not_libratone": "Ikke en Libratone-høyttaler.",
+      "cannot_connect": "Høyttaleren svarer ikke."
+    }
+  },
+  "entity": {
+    "select": {
+      "room_placement": {
+        "name": "Plassering i rommet"
+      },
+      "channel": {
+        "name": "Lydkanal",
+        "state": {
+          "stereo": "Stereo (begge)",
+          "left": "Venstre",
+          "right": "Høyre"
+        }
+      },
+      "save_favorite": {
+        "name": "Lagre stasjonen som spilles som favoritt"
+      },
+      "color": {
+        "name": "Farge"
+      }
+    },
+    "number": {
+      "sleep_timer": {
+        "name": "Søvntimer"
+      }
+    },
+    "sensor": {
+      "wifi_signal": {
+        "name": "WiFi-signal"
+      },
+      "wifi_network": {
+        "name": "WiFi-nettverk"
+      },
+      "ip_address": {
+        "name": "IP-adresse"
+      }
+    },
+    "text": {
+      "speaker_name": {
+        "name": "Høyttalernavn"
+      }
+    },
+    "binary_sensor": {
+      "muted": {
+        "name": "Dempet"
+      }
+    },
+    "event": {
+      "favorite_started": {
+        "name": "Favoritt startet",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "favorite_1": "Favoritt 1",
+              "favorite_2": "Favoritt 2",
+              "favorite_3": "Favoritt 3",
+              "favorite_4": "Favoritt 4",
+              "favorite_5": "Favoritt 5"
+            }
+          }
+        }
+      }
+    }
+  },
+  "services": {
+    "save_favorite": {
+      "name": "Lagre favoritt",
+      "description": "Lagrer radiostasjonen som spilles nå i en av høyttalerens fem favorittplasser (som «+» i Libratone-appen). Fungerer bare mens en radiostasjon spilles.",
+      "fields": {
+        "slot": {
+          "name": "Plass",
+          "description": "Favorittplass 1-5 som overskrives."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Høyttalervalg",
+        "description": "En høyttaler som får en ny IP-adresse, blir normalt funnet igjen automatisk (DHCP, egne nettverkskunngjøringer, zeroconf). Bare hvis det ikke fungerer i oppsettet ditt, f.eks. Home Assistant i Docker uten vertsnettverk, slår du på aktivt søk: Så lenge høyttaleren mangler, sendes en liten forespørsel til hver adresse i nettverket.",
+        "data": {
+          "rediscover": "Søk aktivt i nettverket hvis høyttaleren ikke blir funnet (UDP-søk)"
+        }
+      }
     }
   }
 }
